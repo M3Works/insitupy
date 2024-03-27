@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import geopandas as gpd
 from typing import List
 
+import numpy as np
 import pandas as pd
 
 from metloom.pointdata import PointData
@@ -57,6 +58,12 @@ Big pluses
     * will need login info for NSIDC
     * stratigraphy will be the most complicated
 
+# TODO Next
+    * Clean up the metadata file reading
+        * We don't need everything we're reading right now
+    * map to sample_a, sample_b when reading in file
+    * flush out density and swe calcs
+
 """
 
 LOG = logging.getLogger(__name__)
@@ -68,13 +75,6 @@ class ProfileVariables(VariableBase):
 
 @dataclass()
 class ProfileMetaData:
-    """
-    {'site_name': 'East River', 'site_id': 'Aspen',
-    'pit_id': 'COERAP_20200427_0845', 'date/local_standard_time':
-    '2020-04-27T08:45',
-    'utm_zone': 13, 'easting': 329130.6226853253, 'northing': 4310327.542391408,
-    'latitude': 38.92524, 'longitude': -106.97112, 'flags': None, 'date': datetime.date(2020, 4, 27), 'time': datetime.time(14, 45, tzinfo=<UTC>), 'epsg': 26913}
-    """
     id: str
     date_time: pd.Timestamp
     latitude: float
@@ -87,12 +87,14 @@ class ProfileMetaData:
 class ProfileData:
     """
     This would be one pit, SMP profile, etc
-    Unique date, location
-    # TODO:
-    #   Do we make these single variable or provide methods for merging
-    #   multiple variables, files, ProfileData to fill out a full df
+    Unique date, location, variable
     """
-    def __init__(self, input_df, metadata: ProfileMetaData):
+    SAMPLE_PATTERN = "sample"
+
+    def __init__(
+        self, input_df, metadata: ProfileMetaData, variable: SensorDescription,
+        depth_layer="depth", lower_depth_layer="bottom_depth"
+    ):
         """
         Take df of layered data (SMP, pit, etc)
         Args:
@@ -101,24 +103,30 @@ class ProfileData:
                 Should include sample or sample_a, sample_b, etc
 
         """
-        # TODO: think about implementing a Metadata class
-        #   that is more standardized and could be passed in with
-        #   required variables for other (non snowex) campaigns
+        self._depth_layer = depth_layer
+        self._lower_depth_layer = lower_depth_layer
         self._metadata = metadata
-        self.variable: ProfileVariables = None
-
-        # TODO: this won't work across profile types - needs to be metadata class
+        self.variable: SensorDescription = variable
         self._id = metadata.id
         self._dt = metadata.date_time
-        self.site_name = metadata.site_name
-        self.site_id = metadata.site_id
         self._df = self._format_df(input_df)
+
+        columns = self._df.columns.values
+        if self._depth_layer not in columns:
+            raise ValueError(f"Expected {self._depth_layer} in columns")
+        self._sample_columns = [c for c in columns if self.SAMPLE_PATTERN in c]
+        if len(self._sample_columns) == 0:
+            raise ValueError(f"No sample columns in {columns}")
+
+        # describe the data a bit
+        self._has_layers = self._lower_depth_layer in columns
+        # More than 1 sample of the variable (sample_1, sample_2)...
+        self._multi_sample = len(self._sample_columns) > 1
 
     def _format_df(self, input_df):
         """
         Format the incoming df with the column headers and other info we want
         """
-        # TODO: check for multi sample (a, b or c in columns)
         n_entries = len(input_df)
         input_df["datetime"] = [self._dt] * n_entries
         lat, lon = self.latlon
@@ -134,7 +142,7 @@ class ProfileData:
     @property
     def latlon(self):
         # return location metadata
-        return self._metadata.info["latitude"], self._metadata.info["longitude"]
+        return self._metadata.latitude, self._metadata.longitude
 
     @property
     def df(self):
@@ -142,6 +150,14 @@ class ProfileData:
 
     def get_value(self, variable: ProfileVariables):
         # get bulk value
+        if not self._has_layers:
+            raise RuntimeError("Cannot compute for no layers")
+        if self._multi_sample:
+            profile_average = self._df.loc[:, self._sample_columns].mean(axis=1)
+            self._df["mean"] = profile_average
+            # TODO: sum up with depth change
+        else:
+            pass
         pass
 
     def get_profile(self, variable, snow_datum="ground"):
@@ -182,31 +198,6 @@ class ProfileData:
 
 class SnowExProfileData(ProfileData):
 
-    def __init__(self, input_df, metadata: DataHeader):
-        """
-        Take df of layered data (SMP, pit, etc)
-        Args:
-            input_df: dataframe of data
-                Should include depth and optional bottom depth
-                Should include sample or sample_a, sample_b, etc
-
-        """
-        # TODO: think about implementing a Metadata class
-        #   that is more standardized and could be passed in with
-        #   required variables for other (non snowex) campaigns
-        self._metadata = metadata
-        self.variable: ProfileVariables = None
-
-        # TODO: this won't work across profile types - needs to be metadata class
-        self._id = metadata.info["pit_id"]
-        dt_str = metadata.info["date"].isoformat()
-        if metadata.info.get("time"):
-            dt_str += f"T{metadata.info['time'].isoformat()}"
-        self._dt = pd.to_datetime(dt_str)
-        self.site_name = metadata.info["site_name"]
-        self.site_id = metadata.info["site_id"]
-        self._df = self._format_df(input_df)
-
     def _format_df(self, input_df):
         """
         Format the incoming df with the column headers and other info we want
@@ -224,26 +215,30 @@ class SnowExProfileData(ProfileData):
         df = gpd.GeoDataFrame(
             input_df, geometry=location
         ).set_crs("EPSG:4326")
-        # TODO: -9999 is nan
+        df = df.replace(-9999, np.NaN)
         return df
 
     @classmethod
     def from_file(cls, fname, variable: ProfileVariables):
         # TODO: timezone here (mapped from site?)
         header = DataHeader(fname, in_timezone="US/Mountain")
-        dt_str = header.info["date"].isoformat()
-        if header.info.get("time"):
-            dt_str += f"T{header.info['time'].isoformat()}"
-        dt = pd.to_datetime(dt_str)
         metadata = ProfileMetaData(
-            id=header.info.
+            id=header.info["pit_id"],
+            date_time=header.info["date_time"],
+            latitude=header.info["latitude"],
+            longitude=header.info["longitude"],
+            utm_zone=header.info.get("utm_zone"),
+            site_id=header.info["site_id"],
+            site_name=header.info["site_name"]
         )
-        data = cls._read(fname, metadata)
-        return cls(data, metadata)
+        # TODO: include variable in this parsing
+        data = cls._read(fname, header)
+        return cls(data, metadata, variable)
 
     @staticmethod
     def _read(profile_filename, metadata):
         """
+        # TODO: better name mapping here
         Read in a profile file. Managing the number of lines to skip and
         adjusting column names
 

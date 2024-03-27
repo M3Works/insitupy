@@ -622,6 +622,12 @@ class DataHeader(MetaMixIn):
             if data['time'] is not None:
                 data['time'] = d.timetz()
 
+        dt_str = data["date"].isoformat()
+        if data.get("time"):
+            dt_str += f"T{data['time'].isoformat()}"
+        dt = pd.to_datetime(dt_str)
+        data["date_time"] = dt
+
         return data
 
     def _read(self, filename):
@@ -708,36 +714,6 @@ class DataHeader(MetaMixIn):
 
         return data, columns, header_pos
 
-    # TODO: do we need this?
-    # def check_integrity(self, site_info):
-    #     """
-    #     Compare the attribute info to the site dictionary to insure integrity
-    #     between datasets. Comparisons are only done as strings currently.
-    #
-    #     In theory the site details header should contain identical info
-    #     to the profile header, it should only have more info than the profile
-    #     header.
-    #
-    #     Args:
-    #         site_info: Dictionary containing the site details file header
-    #
-    #     Returns:
-    #         mismatch: Dictionary with a message about how a piece of info is
-    #                   mismatched
-    #
-    #     """
-    #     mismatch = {}
-    #
-    #     for k, v in self.info.items():
-    #         if k not in site_info.keys():
-    #             mismatch[k] = 'Key not found in site details'
-    #
-    #         else:
-    #             if v != site_info[k]:
-    #                 mismatch[k] = 'Profile header != Site details header'
-    #
-    #     return mismatch
-
     @staticmethod
     def reproject_point_in_dict(info, is_northern=True, zone_number=None):
         """
@@ -768,12 +744,7 @@ class DataHeader(MetaMixIn):
         keys = result.keys()
         # Use lat/long first
         if all([k in keys for k in ['latitude', 'longitude']]):
-            easting, northing, utm_zone, letter = utm.from_latlon(
-                result['latitude'],
-                result['longitude'], force_zone_number=zone_number)
-            result['easting'] = easting
-            result['northing'] = northing
-            result['utm_zone'] = utm_zone
+            LOG.debug("Already have lat, lon coordinates in metadata")
 
         # Secondarily use the utm to add lat long
         elif all([k in keys for k in ['northing', 'easting', 'utm_zone']]):
@@ -789,15 +760,6 @@ class DataHeader(MetaMixIn):
 
             result['latitude'] = lat
             result['longitude'] = long
-
-        # Assuming NAD83, add epsg code
-        if 'utm_zone' in result.keys():
-            if result['utm_zone'] is not None:
-                result['epsg'] = int(f"269{result['utm_zone']}")
-        else:
-            result['utm_zone'] = None
-            result['epsg'] = None
-
         return result
 
     def interpret_data(self, raw_info):
