@@ -10,8 +10,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from metloom.variables import SensorDescription, VariableBase
 from loomsitu.campaigns.metadata import MetaDataParser, ProfileMetaData
+from loomsitu.campaigns.variables import ProfileVariables, MeasurementDescription
 
 """
 
@@ -68,22 +68,7 @@ Big pluses
 LOG = logging.getLogger(__name__)
 
 
-class ProfileVariables(VariableBase):
-    SWE = SensorDescription("SWE", "SWE", "Snow Water Equivalent")
-    # TODO: more variables
-    #  temperature
-    DEPTH = SensorDescription(
-        "depth", "depth", "top or center depth of measurement"
-    )
-    BOTTOM_DEPTH = SensorDescription(
-        "bottom_depth", "bottom_depth", "Lower edge of measurement"
-    )
-    DENSITY = SensorDescription(
-        "density", "density", "measured snow density"
-    )
-    LAYER_THICKNESS = SensorDescription(
-        "layer_thickness", "layer_thickness", "thickness of layer"
-    )
+
 
 
 class ProfileData:
@@ -95,7 +80,7 @@ class ProfileData:
     VARIABLES = ProfileVariables
 
     def __init__(
-        self, input_df, metadata: ProfileMetaData, variable: SensorDescription,
+        self, input_df, metadata: ProfileMetaData, variable: MeasurementDescription,
     ):
         """
         Take df of layered data (SMP, pit, etc)
@@ -108,15 +93,27 @@ class ProfileData:
         self._depth_layer = self.VARIABLES.DEPTH
         self._lower_depth_layer = self.VARIABLES.BOTTOM_DEPTH
         self._metadata = metadata
-        self.variable: SensorDescription = variable
+        self.variable: MeasurementDescription = variable
+        # mapping of column name to measurement type
+        self._column_mappings = {}
+        # List of measurements to keep
+        self._measurements_to_keep = [
+            self._depth_layer, self._lower_depth_layer, self.variable
+        ]
+        self._non_measure_columns = [
+            self._depth_layer, self._lower_depth_layer, "datetime", "geometry"
+        ]
+
         self._id = metadata.id
         self._dt = metadata.date_time
         self._df = self._format_df(input_df)
 
         columns = self._df.columns.values
-        if self._depth_layer not in columns:
+        if self._depth_layer.code not in columns:
             raise ValueError(f"Expected {self._depth_layer} in columns")
-        self._sample_columns = [c for c in columns if self.SAMPLE_PATTERN in c]
+        self._sample_columns = [
+            c for c in columns if c not in self._non_measure_columns
+        ]
         if len(self._sample_columns) == 0:
             raise ValueError(f"No sample columns in {columns}")
 
@@ -124,30 +121,49 @@ class ProfileData:
         self._has_layers = self._lower_depth_layer.code in columns
         # More than 1 sample of the variable (sample_1, sample_2)...
         self._multi_sample = len(self._sample_columns) > 1
+        # Extend the df info
+        self._extend_df()
 
     def _format_df(self, input_df):
         """
         Format the incoming df with the column headers and other info we want
         """
-        n_entries = len(input_df)
-        input_df["datetime"] = [self._dt] * n_entries
+
+        # Get rid of columns we don't want and populate column mapping
+        columns = input_df.columns.values
+        for c in columns:
+            cn, cm = ProfileVariables.from_mapping(c)
+            # join with existing mappings
+            self._column_mappings = {**cm, **self._column_mappings}
+
+        columns_to_keep = [
+            c for c in columns
+            if self._column_mappings[c] in self._measurements_to_keep
+        ]
+        df = input_df.loc[:, columns_to_keep]
+
+        n_entries = len(df)
+        df["datetime"] = [self._dt] * n_entries
+
+        # parse the location
         lat, lon = self.latlon
         location = gpd.points_from_xy(
-            [lon], [lat]
+            [lon] * n_entries, [lat] * n_entries
         )
-        df = gpd.GeoDataFrame(
-            input_df, geometry=location
-        ).set_crs("EPSG:4326")
-        # -9999 is nan
-        df[df==-9999] = np.nan
 
-        # set the thickness of the layer
-        if self._has_layers:
-            df[self.VARIABLES.LAYER_THICKNESS.code] = (
-                df[self.VARIABLES.DEPTH.code] - df[self.VARIABLES.BOTTOM_DEPTH.code]
-            )
+        df = gpd.GeoDataFrame(
+            df, geometry=location
+        ).set_crs("EPSG:4326")
+        df = df.replace(-9999, np.NaN)
 
         return df
+
+    def _extend_df(self):
+        # set the thickness of the layer
+        if self._has_layers:
+            self._df[self.VARIABLES.LAYER_THICKNESS.code] = (
+                self._df[self._depth_layer.code] - self._df[self._lower_depth_layer.code]
+            )
 
     @property
     def latlon(self):
@@ -203,28 +219,8 @@ class ProfileData:
 
 class SnowExProfileData(ProfileData):
 
-    def _format_df(self, input_df):
-        """
-        Format the incoming df with the column headers and other info we want
-        """
-        # TODO: check for multi sample (a, b or c in columns)
-        df = pd.DataFrame()
-        n_entries = len(input_df)
-        input_df["datetime"] = [self._dt] * n_entries
-
-        # parse the location
-        lat, lon = self.latlon
-        location = gpd.points_from_xy(
-            [lon] * n_entries, [lat] * n_entries
-        )
-        df = gpd.GeoDataFrame(
-            input_df, geometry=location
-        ).set_crs("EPSG:4326")
-        df = df.replace(-9999, np.NaN)
-        return df
-
     @classmethod
-    def from_file(cls, fname, variable: SensorDescription):
+    def from_file(cls, fname, variable: MeasurementDescription):
         # TODO: timezone here (mapped from site?)
         meta_parser = MetaDataParser(fname, "US/Mountain")
         metadata, columns, header_pos = meta_parser.parse()
@@ -239,6 +235,8 @@ class SnowExProfileData(ProfileData):
         # )
         # TODO: include variable in this parsing
         data = cls._read(fname, columns, header_pos)
+        # Filter to desired variables
+
         return cls(data, metadata, variable)
 
     @staticmethod
@@ -317,13 +315,13 @@ class ProfileDataCollection:
         # find all points with variable == density and calc SWE
         pass
 
-    def get_mean(self, variable: SensorDescription):
+    def get_mean(self, variable: MeasurementDescription):
         raise NotImplementedError()
 
-    def get_sum(self, variable: SensorDescription):
+    def get_sum(self, variable: MeasurementDescription):
         raise NotImplementedError()
 
-    def get_profile(self, variable: SensorDescription):
+    def get_profile(self, variable: MeasurementDescription):
         raise NotImplementedError()
 
     # def get_pit_data(self, start_date, end_date, variables) -> List[PointData]:
@@ -341,7 +339,7 @@ class ProfileDataCollection:
     def points_from_geometry(
         cls,
         geometry: gpd.GeoDataFrame,
-        variables: List[SensorDescription],
+        variables: List[MeasurementDescription],
         snow_courses=False,
         within_geometry=True,
         buffer=0.0

@@ -7,6 +7,7 @@ import pytz
 import utm
 
 from loomsitu.campaigns.strings import StringManager
+from loomsitu.campaigns.variables import ProfileVariables, MeasurementDescription
 
 LOG = logging.getLogger(__name__)
 
@@ -26,9 +27,10 @@ class MetaDataParser:
     """
     Base class for parsing metadata
     """
-    def __init__(self, fname, timezone):
+    def __init__(self, fname, timezone, header_sep=","):
         self._fname = fname
         self.input_timezone = timezone
+        self._header_sep = header_sep
 
     def parse_id(self, meta_str) -> str:
         pass
@@ -51,13 +53,15 @@ class MetaDataParser:
     def parse_site_name(self, meta_str) -> str:
         pass
 
-    def parse(self) -> ProfileMetaData:
+    def parse(self):
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
         metadata
         """
-        meta_str = None  # get the metadata string from reading the file
+        meta_str, columns, header_position = self._read(self._fname)
+
+        # TODO: do these replace parse header?
         metadata = ProfileMetaData(
             id=self.parse_id(meta_str),
             date_time=self.parse_date_time(meta_str),
@@ -67,11 +71,153 @@ class MetaDataParser:
             site_id=self.parse_site_id(meta_str),
             site_name=self.parse_site_name(meta_str),
         )
-        columns = None
-        header_position = None
 
         return metadata, columns, header_position
 
+    def _parse_header(self, lines):
+        # Key value pairs are separate by some separator provided.
+        data = {}
+
+        # Collect key value pairs from the information above the column header
+        for ln in lines:
+            d = ln.split(self._header_sep)
+
+            # Key is always the first entry in comma sep list
+            k = StringManager.standardize_key(d[0])
+
+            # Avoid splitting on times
+            if 'time' in k or 'date' in k:
+                value = ':'.join(d[1:]).strip()
+            else:
+                value = ', '.join(d[1:])
+                value = StringManager.clean_str(value)
+
+            # Assign non empty strings to dictionary
+            if k and value:
+                data[k] = value.strip(' ').replace('"', '').replace('  ', ' ')
+
+            elif k and not value:
+                data[k] = None
+
+        LOG.debug(
+            'Discovered {} lines of valid header info.'
+            ''.format(len(data.keys()))
+        )
+        return data
+
+    def _parse_columns(self, str_line):
+        """
+        Parse the column names from the input line. This can include mapping
+        """
+        # Parse the columns header based on the size of the last line
+        # Remove units
+        for c in ['()', '[]']:
+            str_line = StringManager.strip_encapsulated(str_line, c)
+
+        raw_cols = str_line.strip('#').split(',')
+        standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
+        final_cols = []
+        for c in standard_cols:
+            mapped_col, col_map = ProfileVariables.from_mapping(c)
+            final_cols.append(mapped_col)
+
+        return final_cols
+
+    def _read(self, filename):
+        """
+        Read in all site details file for a pit If the filename has the word site in it then we
+        read everything in the file. Otherwise we use this to read all the site
+        data up to the header of the profile.
+
+        E.g. Read all commented data until we see a column descriptor.
+
+        Args:
+            filename: Path to a csv containing # leading lines with site details
+
+        Returns:
+            tuple: **data** - Dictionary containing site details
+                   **columns** - List of clean column names
+                   **header_pos** - Index of the columns header for skiprows in
+                                    read_csv
+       """
+
+        with open(filename, encoding='latin') as fp:
+            lines = fp.readlines()
+            fp.close()
+
+        # Site description files have no need for column lists
+        if 'site' in filename.lower():
+            LOG.info('Parsing site description header...')
+            columns = None
+            header_pos = None
+
+        # Find the column names and where it is in the file
+        else:
+            header_pos = self._find_header_position(lines)
+            columns = self._parse_columns(lines[header_pos])
+            LOG.debug(
+                f'Column Data found to be {len(columns)} columns based on'
+                f' Line {header_pos}'
+            )
+            # Only parse what we know if the header
+            lines = lines[0:header_pos]
+
+        # Clean up the lines from line returns to grab header info
+        lines = [ln.strip() for ln in lines]
+        str_data = " ".join(lines).split('#')
+
+        return str_data, columns, header_pos
+
+    def _find_header_position(self, lines):
+        """
+        A flexible mnethod that attempts to find and standardize column names
+        for csv data. Looks for a comma separated line with N entries == to the
+        last line in the file. If an entry is found with more commas than the
+        last line then we use that. This allows us to have data that doesn't
+        have all the commas in the data (SSA typically missing the comma for
+        veg unless it was notable)
+
+        Assumptions:
+
+        1. The last line in file is of representative csv data
+        2. The header is the last column that has more chars than numbers
+
+        Args:
+            lines: Complete list of strings from the file
+
+        Returns:
+            header position
+        """
+
+        # Minimum column size should match the last line of data (Assumption
+        # #2)
+        n_columns = len(lines[-1].split(','))
+
+        # Use these to monitor if a larger column count is found
+        header_pos = 0
+        if lines[0][0] == '#':
+            header_indicator = '#'
+        else:
+            header_indicator = None
+
+        for i, l in enumerate(lines):
+            if i == 0:
+                previous = StringManager.get_alpha_ratio(lines[i])
+            else:
+                previous = StringManager.get_alpha_ratio(lines[i - 1])
+
+            if StringManager.line_is_header(
+                l, expected_columns=n_columns,
+                header_indicator=header_indicator,
+                previous_alpha_ratio=previous
+            ):
+                header_pos = i
+
+            if i > header_pos:
+                break
+
+        LOG.debug('Found end of header at line {}...'.format(header_pos))
+        return header_pos
 
 
 class MetaMixIn:
@@ -451,7 +597,7 @@ class DataHeader(MetaMixIn):
 
     def parse_column_names(self, lines):
         """
-        A flexible mnethod that attempts to find and standardize column names
+        A flexible method that attempts to find and standardize column names
         for csv data. Looks for a comma separated line with N entries == to the
         last line in the file. If an entry is found with more commas than the
         last line then we use that. This allows us to have data that doesn't
