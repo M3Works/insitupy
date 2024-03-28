@@ -27,31 +27,159 @@ class MetaDataParser:
     """
     Base class for parsing metadata
     """
+    OUT_TIMEZONE = "UTC"
+    ID_NAMES = ["pitid", "pit_id"]
+
     def __init__(self, fname, timezone, header_sep=","):
         self._fname = fname
-        self.input_timezone = timezone
+        self._input_timezone = timezone
         self._header_sep = header_sep
 
-    def parse_id(self, meta_str) -> str:
+    def parse_id(self, rough_obj) -> str:
+        for k, v in rough_obj.items():
+            if k in self.ID_NAMES:
+                return v
+
+        raise RuntimeError(f"Failed to parse ID from {rough_obj}")
+
+    def parse_date_time(self, rough_obj) -> pd.Timestamp:
+        keys = [k.lower() for k in rough_obj.keys()]
+        d = None
+        out_tz = pytz.timezone(self.OUT_TIMEZONE)
+        # Convert timezones if it is provided
+        # this variable gets rewritten later
+        in_timezone = self._input_timezone
+        if in_timezone is not None:
+            in_tz = pytz.timezone(in_timezone)
+        # Otherwise assume incoming data is the same timezone
+        else:
+            raise ValueError("We did not recieve a valid in_timezone")
+
+        # Look for a single header entry containing date and time.
+        for k in keys:
+            kl = k.lower()
+            if 'date' in kl and 'time' in kl:
+                str_date = str(rough_obj[k].replace('T', '-'))
+                d = pd.to_datetime(str_date)
+                break
+
+        # If we didn't find date/time combined.
+        if d is None:
+            # Handle data dates and times
+            if 'date' in keys and 'time' in keys:
+                # Assume MMDDYY format
+                if len(rough_obj['date']) == 6:
+                    dt = rough_obj['date']
+                    # Put into YY-MM-DD
+                    rough_obj['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
+                    # Allow for nan time
+                    rough_obj['time'] = StringManager.parse_none(
+                        rough_obj['time']
+                    )
+
+                date_str = rough_obj["date"]
+                if rough_obj["time"] is not None:
+                    date_str += f" {rough_obj['time']}"
+                d = pd.to_datetime(date_str)
+
+            elif 'date' in keys:
+                d = pd.to_datetime(rough_obj['date'])
+
+            # Handle gpr data dates
+            elif 'utcyear' in keys and 'utcdoy' in keys and 'utctod' in keys:
+                base = pd.to_datetime(
+                    '{:d}-01-01 00:00:00 '.format(int(rough_obj['utcyear'])),
+                    utc=True)
+
+                # Number of days since january 1
+                d = int(rough_obj['utcdoy']) - 1
+
+                # Zulu time (time without colons)
+                time = str(rough_obj['utctod'])
+                hr = int(time[0:2])  # hours
+                mm = int(time[2:4])  # minutes
+                ss = int(time[4:6])  # seconds
+                ms = int(
+                    float('0.' + time.split('.')[-1]) * 1000)  # milliseconds
+
+                delta = timedelta(
+                    days=d, hours=hr, minutes=mm, seconds=ss, milliseconds=ms
+                )
+                # This is the only key set that ignores in_timezone
+                d = base.astimezone(pytz.timezone('UTC')) + delta
+
+                # Avoid using in_timezone and UTC defined keys
+                in_timezone = None
+
+                d = d.astimezone(out_tz)
+
+            else:
+                raise ValueError(
+                    'Data is missing date/time info!\n{}'.format(rough_obj))
+
+        if in_timezone is not None:
+            d = d.tz_localize(in_tz)
+            d = d.astimezone(out_tz)
+
+        else:
+            d.replace(tzinfo=out_tz)
+
+        rough_obj['date'] = d.date()
+
+        # Dont add time to a time that was nan or none
+        if 'time' not in rough_obj.keys():
+            rough_obj['time'] = d.timetz()
+        else:
+            if rough_obj['time'] is not None:
+                rough_obj['time'] = d.timetz()
+
+        dt_str = rough_obj["date"].isoformat()
+        if rough_obj.get("time"):
+            dt_str += f"T{rough_obj['time'].isoformat()}"
+        dt = pd.to_datetime(dt_str)
+
+        return dt
+
+    def parse_latitude(self, rough_obj) -> float:
         pass
 
-    def parse_date_time(self, meta_str) -> pd.Timestamp:
+    def parse_longitude(self, rough_obj) -> float:
         pass
 
-    def parse_latitude(self, meta_str) -> float:
+    def parse_utm_zone(self, rough_obj) -> str:
         pass
 
-    def parse_longitude(self, meta_str) -> float:
+    def parse_site_id(self, rough_obj) -> str:
         pass
 
-    def parse_utm_zone(self, meta_str) -> str:
+    def parse_site_name(self, rough_obj) -> str:
         pass
 
-    def parse_site_id(self, meta_str) -> str:
-        pass
+    def _preparse_meta(self, meta_lines):
+        # Key value pairs are separate by some separator provided.
+        data = {}
 
-    def parse_site_name(self, meta_str) -> str:
-        pass
+        # Collect key value pairs from the information above the column header
+        for ln in meta_lines:
+            d = ln.split(self._header_sep)
+
+            # Key is always the first entry in comma sep list
+            k = StringManager.standardize_key(d[0])
+
+            # Avoid splitting on times
+            if 'time' in k or 'date' in k:
+                value = ':'.join(d[1:]).strip()
+            else:
+                value = ', '.join(d[1:])
+                value = StringManager.clean_str(value)
+
+            # Assign non empty strings to dictionary
+            if k and value:
+                data[k] = value.strip(' ').replace('"', '').replace('  ', ' ')
+
+            elif k and not value:
+                data[k] = None
+        return data
 
     def parse(self):
         """
@@ -59,17 +187,18 @@ class MetaDataParser:
         We can override these methods as needed to parse the different
         metadata
         """
-        meta_str, columns, header_position = self._read(self._fname)
+        meta_lines, columns, header_position = self._read(self._fname)
+        rough_obj = self._preparse_meta(meta_lines)
 
         # TODO: do these replace parse header?
         metadata = ProfileMetaData(
-            id=self.parse_id(meta_str),
-            date_time=self.parse_date_time(meta_str),
-            latitude=self.parse_latitude(meta_str),
-            longitude=self.parse_longitude(meta_str),
-            utm_zone=self.parse_utm_zone(meta_str),
-            site_id=self.parse_site_id(meta_str),
-            site_name=self.parse_site_name(meta_str),
+            id=self.parse_id(rough_obj),
+            date_time=self.parse_date_time(rough_obj),
+            latitude=self.parse_latitude(rough_obj),
+            longitude=self.parse_longitude(rough_obj),
+            utm_zone=self.parse_utm_zone(rough_obj),
+            site_id=self.parse_site_id(rough_obj),
+            site_name=self.parse_site_name(rough_obj),
         )
 
         return metadata, columns, header_position
@@ -221,92 +350,6 @@ class MetaDataParser:
 
 
 class MetaMixIn:
-    @staticmethod
-    def find_kw_in_lines(kw, lines, addon_str=' = '):
-        """
-        Returns the index of a list of strings that had a kw in it
-
-        Args:
-            kw: Keyword to find in a line
-            lines: List of strings to search for the keyword
-            addon_str: String to append to your key word to help filter
-        Return:
-            i: Integer of the index of a line containing a kw. -1 otherwise
-        """
-        str_temp = '{}' + addon_str
-
-        for i, line in enumerate(lines):
-            s = str_temp.format(kw)
-
-            uncommented = line.strip('#')
-
-            if s in uncommented:
-                if s[0] == uncommented[0]:
-                    break
-        # No match
-        # TODO: here
-        if i == len(lines) - 1:
-            i = -1
-
-        return i
-
-    @staticmethod
-    def assign_default_kwargs(object, kwargs, defaults, leave=None):
-        """
-        Assign keyword arguments to class attributes. If a key in the default
-        is not in the kwargs then its value becomes the value in the default.
-        Any value found in the defaults is removed from the kwargs
-
-        Args:
-            object: Object to assign as keys in defaults as attributes
-            kwargs: Dictionary of keyword arguments provided
-            defaults: Dictionary of all class related arguments that are assigned as attributes
-            leave: List of attributes to leave in mod_kwargs
-        Returns:
-            mod_kwargs: kwargs with all keys in the defaults removed from it.
-        """
-        leave = leave or []
-        mod_kwargs = kwargs.copy()
-
-        # Loop over all the defaults
-        for k, v in defaults.items():
-            # if the k was provided then use it and remove it from the kwargs
-            if k in kwargs.keys():
-                value = kwargs[k]
-                # Delete it so kwargs could be passed on for other use unless its
-                # requested to be left
-                if k not in leave:
-                    del mod_kwargs[k]
-
-            else:
-                # Make sure we have a value assigned from the defaults
-                value = v
-
-            # Assign it as a class attribute
-            setattr(object, k, value)
-
-        return mod_kwargs
-
-    @staticmethod
-    def is_point_data(columns):
-        """
-        Searches the csv column names to see if the data set is point data,
-        which will have latitude or easting in the columns. If it is, return True
-
-        Args:
-            columns: List of dataframe columns
-        Return:
-            result: Boolean indicating if the data is point data
-        """
-
-        result = False
-
-        # Check for point data which will contain this in the data not the header
-        if columns is not None and (
-            'latitude' in columns or 'easting' in columns):
-            result = True
-
-        return result
 
     @staticmethod
     def manage_degrees(info):

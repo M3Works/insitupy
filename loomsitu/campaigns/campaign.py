@@ -77,6 +77,7 @@ class ProfileData:
     Unique date, location, variable
     """
     VARIABLES = ProfileVariables
+    META_PARSER = MetaDataParser
 
     def __init__(
         self, input_df, metadata: ProfileMetaData, variable: MeasurementDescription,
@@ -233,7 +234,7 @@ class SnowExProfileData(ProfileData):
     @classmethod
     def from_file(cls, fname, variable: MeasurementDescription):
         # TODO: timezone here (mapped from site?)
-        meta_parser = MetaDataParser(fname, "US/Mountain")
+        meta_parser = cls.META_PARSER(fname, "US/Mountain")
         metadata, columns, header_pos = meta_parser.parse()
         # metadata = ProfileMetaData(
         #     id=header.info["pit_id"],
