@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import timedelta
 
 import logging
@@ -8,6 +9,69 @@ import utm
 from loomsitu.campaigns.strings import StringManager
 
 LOG = logging.getLogger(__name__)
+
+
+@dataclass()
+class ProfileMetaData:
+    id: str
+    date_time: pd.Timestamp
+    latitude: float
+    longitude: float
+    utm_zone: str = None
+    site_id: str = None
+    site_name: str = None
+
+
+class MetaDataParser:
+    """
+    Base class for parsing metadata
+    """
+    def __init__(self, fname, timezone):
+        self._fname = fname
+        self.input_timezone = timezone
+
+    def parse_id(self, meta_str) -> str:
+        pass
+
+    def parse_date_time(self, meta_str) -> pd.Timestamp:
+        pass
+
+    def parse_latitude(self, meta_str) -> float:
+        pass
+
+    def parse_longitude(self, meta_str) -> float:
+        pass
+
+    def parse_utm_zone(self, meta_str) -> str:
+        pass
+
+    def parse_site_id(self, meta_str) -> str:
+        pass
+
+    def parse_site_name(self, meta_str) -> str:
+        pass
+
+    def parse(self) -> ProfileMetaData:
+        """
+        Parse the file and return a metadata object.
+        We can override these methods as needed to parse the different
+        metadata
+        """
+        meta_str = None  # get the metadata string from reading the file
+        metadata = ProfileMetaData(
+            id=self.parse_id(meta_str),
+            date_time=self.parse_date_time(meta_str),
+            latitude=self.parse_latitude(meta_str),
+            longitude=self.parse_longitude(meta_str),
+            utm_zone=self.parse_utm_zone(meta_str),
+            site_id=self.parse_site_id(meta_str),
+            site_name=self.parse_site_name(meta_str),
+        )
+        columns = None
+        header_position = None
+
+        return metadata, columns, header_position
+
 
 
 class MetaMixIn:

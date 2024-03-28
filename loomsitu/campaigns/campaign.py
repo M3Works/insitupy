@@ -10,9 +10,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from metloom.pointdata import PointData
 from metloom.variables import SensorDescription, VariableBase
-from loomsitu.campaigns.metadata import DataHeader
+from loomsitu.campaigns.metadata import MetaDataParser, ProfileMetaData
 
 """
 
@@ -71,17 +70,20 @@ LOG = logging.getLogger(__name__)
 
 class ProfileVariables(VariableBase):
     SWE = SensorDescription("SWE", "SWE", "Snow Water Equivalent")
-
-
-@dataclass()
-class ProfileMetaData:
-    id: str
-    date_time: pd.Timestamp
-    latitude: float
-    longitude: float
-    utm_zone: str = None
-    site_id: str = None
-    site_name: str = None
+    # TODO: more variables
+    #  temperature
+    DEPTH = SensorDescription(
+        "depth", "depth", "top or center depth of measurement"
+    )
+    BOTTOM_DEPTH = SensorDescription(
+        "bottom_depth", "bottom_depth", "Lower edge of measurement"
+    )
+    DENSITY = SensorDescription(
+        "density", "density", "measured snow density"
+    )
+    LAYER_THICKNESS = SensorDescription(
+        "layer_thickness", "layer_thickness", "thickness of layer"
+    )
 
 
 class ProfileData:
@@ -90,10 +92,10 @@ class ProfileData:
     Unique date, location, variable
     """
     SAMPLE_PATTERN = "sample"
+    VARIABLES = ProfileVariables
 
     def __init__(
         self, input_df, metadata: ProfileMetaData, variable: SensorDescription,
-        depth_layer="depth", lower_depth_layer="bottom_depth"
     ):
         """
         Take df of layered data (SMP, pit, etc)
@@ -103,8 +105,8 @@ class ProfileData:
                 Should include sample or sample_a, sample_b, etc
 
         """
-        self._depth_layer = depth_layer
-        self._lower_depth_layer = lower_depth_layer
+        self._depth_layer = self.VARIABLES.DEPTH
+        self._lower_depth_layer = self.VARIABLES.BOTTOM_DEPTH
         self._metadata = metadata
         self.variable: SensorDescription = variable
         self._id = metadata.id
@@ -119,7 +121,7 @@ class ProfileData:
             raise ValueError(f"No sample columns in {columns}")
 
         # describe the data a bit
-        self._has_layers = self._lower_depth_layer in columns
+        self._has_layers = self._lower_depth_layer.code in columns
         # More than 1 sample of the variable (sample_1, sample_2)...
         self._multi_sample = len(self._sample_columns) > 1
 
@@ -136,7 +138,15 @@ class ProfileData:
         df = gpd.GeoDataFrame(
             input_df, geometry=location
         ).set_crs("EPSG:4326")
-        # TODO: -9999 is nan
+        # -9999 is nan
+        df[df==-9999] = np.nan
+
+        # set the thickness of the layer
+        if self._has_layers:
+            df[self.VARIABLES.LAYER_THICKNESS.code] = (
+                df[self.VARIABLES.DEPTH.code] - df[self.VARIABLES.BOTTOM_DEPTH.code]
+            )
+
         return df
 
     @property
@@ -148,52 +158,47 @@ class ProfileData:
     def df(self):
         return self._df
 
-    def get_value(self, variable: ProfileVariables):
+    @property
+    def sum(self):
         # get bulk value
         if not self._has_layers:
+            # could we assume equidistant spacing and do a mean?
             raise RuntimeError("Cannot compute for no layers")
-        if self._multi_sample:
-            profile_average = self._df.loc[:, self._sample_columns].mean(axis=1)
-            self._df["mean"] = profile_average
-            # TODO: sum up with depth change
-        else:
-            pass
-        pass
 
-    def get_profile(self, variable, snow_datum="ground"):
-        # snow datum is ground or snow
-        # get profile of values
+        # this should work for multi or not multi sample
+        profile_average = self._df.loc[:, self._sample_columns].mean(axis=1)
+        self._df["mean"] = profile_average
+        # TODO: sum up with depth change
+        # TODO: could we use the weighted mean * the total depth?
+        # TODO: units
         pass
 
     @property
-    def SWE(self):
-        """
-        Average of samples, then summed with depth to get bulk SWE
-        """
-        # TODO: how to handle densA, densB, etc
-        #       They should be sample_a, sample_b....
-        pass
+    def mean(self):
+        profile_average = self._df.loc[:, self._sample_columns].mean(
+            axis=1)
+        self._df["mean"] = profile_average
+        if self._has_layers:
+            # height weighted mean for these layers
+            thickness = self._df[self.VARIABLES.LAYER_THICKNESS.code]
+            thickness_total = thickness.sum()
+            weighted_mean = (
+                self._df["mean"] * thickness / thickness_total
+            ).sum()
+            value = weighted_mean
+        else:
+            value = np.mean(profile_average)
+
+        return value
+
+    def get_profile(self, variable, snow_datum="ground"):
+        # TODO: snow datum is ground or snow
+        # get profile of values
+        return self._df
 
     @classmethod
     def from_file(self, fname, variable: ProfileVariables):
         raise NotImplementedError("Not implemented")
-
-
-    # def add_profile(self, profile):
-    #     # merge this with another of the same class
-    #     pass
-    #
-    # def add_file(self, fname):
-    #     # Merge this with another file from the same pit and date
-    #     pass
-    #
-    # def add_df(self, df):
-    #     # merge the dfs and metadata
-    #     pass
-
-    # def __hash__(self):
-    #     # Use to compare if we have something in a list, maybe equality
-    #     return f"{self._id}_{self._dt.strftime('%Y%m%d%H%M')}"
 
 
 class SnowExProfileData(ProfileData):
@@ -203,7 +208,7 @@ class SnowExProfileData(ProfileData):
         Format the incoming df with the column headers and other info we want
         """
         # TODO: check for multi sample (a, b or c in columns)
-        dfs = pd.DataFrame()
+        df = pd.DataFrame()
         n_entries = len(input_df)
         input_df["datetime"] = [self._dt] * n_entries
 
@@ -219,24 +224,25 @@ class SnowExProfileData(ProfileData):
         return df
 
     @classmethod
-    def from_file(cls, fname, variable: ProfileVariables):
+    def from_file(cls, fname, variable: SensorDescription):
         # TODO: timezone here (mapped from site?)
-        header = DataHeader(fname, in_timezone="US/Mountain")
-        metadata = ProfileMetaData(
-            id=header.info["pit_id"],
-            date_time=header.info["date_time"],
-            latitude=header.info["latitude"],
-            longitude=header.info["longitude"],
-            utm_zone=header.info.get("utm_zone"),
-            site_id=header.info["site_id"],
-            site_name=header.info["site_name"]
-        )
+        meta_parser = MetaDataParser(fname, "US/Mountain")
+        metadata, columns, header_pos = meta_parser.parse()
+        # metadata = ProfileMetaData(
+        #     id=header.info["pit_id"],
+        #     date_time=header.info["date_time"],
+        #     latitude=header.info["latitude"],
+        #     longitude=header.info["longitude"],
+        #     utm_zone=header.info.get("utm_zone"),
+        #     site_id=header.info["site_id"],
+        #     site_name=header.info["site_name"]
+        # )
         # TODO: include variable in this parsing
-        data = cls._read(fname, header)
+        data = cls._read(fname, columns, header_pos)
         return cls(data, metadata, variable)
 
     @staticmethod
-    def _read(profile_filename, metadata):
+    def _read(profile_filename, columns, header_position):
         """
         # TODO: better name mapping here
         Read in a profile file. Managing the number of lines to skip and
@@ -251,11 +257,10 @@ class SnowExProfileData(ProfileData):
         # header=0 because docs say to if using skip rows and columns
         df = pd.read_csv(
             profile_filename, header=0,
-            skiprows=metadata.header_pos,
-            names=metadata.columns,
+            skiprows=header_position,
+            names=columns,
             encoding='latin'
         )
-
         # Special SMP specific tasks
         depth_fmt = 'snow_height'
         is_smp = False
@@ -287,7 +292,7 @@ class SnowExProfileData(ProfileData):
 
             delta = abs(df['depth'].max() - df['depth'].min())
             LOG.debug(
-                f'File contains {len(metadata.data_names)} profiles each'
+                f'File contains a profile with'
                 f' with {len(df)} layers across {delta:0.2f} cm'
             )
         return df
@@ -311,6 +316,15 @@ class ProfileDataCollection:
         """
         # find all points with variable == density and calc SWE
         pass
+
+    def get_mean(self, variable: SensorDescription):
+        raise NotImplementedError()
+
+    def get_sum(self, variable: SensorDescription):
+        raise NotImplementedError()
+
+    def get_profile(self, variable: SensorDescription):
+        raise NotImplementedError()
 
     # def get_pit_data(self, start_date, end_date, variables) -> List[PointData]:
     #     """
