@@ -29,6 +29,8 @@ class MetaDataParser:
     """
     OUT_TIMEZONE = "UTC"
     ID_NAMES = ["pitid", "pit_id"]
+    SITE_ID_NAMES = ["site"]
+    SITE_NAME_NAMES = ["location"]
 
     def __init__(self, fname, timezone, header_sep=","):
         self._fname = fname
@@ -141,19 +143,27 @@ class MetaDataParser:
         return dt
 
     def parse_latitude(self, rough_obj) -> float:
-        pass
+        raise NotImplementedError()
 
     def parse_longitude(self, rough_obj) -> float:
-        pass
+        raise NotImplementedError()
 
     def parse_utm_zone(self, rough_obj) -> str:
-        pass
+        raise NotImplementedError()
 
     def parse_site_id(self, rough_obj) -> str:
-        pass
+        for k, v in rough_obj.items():
+            if k in self.SITE_ID_NAMES:
+                return v
+
+        raise RuntimeError(f"Failed to parse Site ID from {rough_obj}")
 
     def parse_site_name(self, rough_obj) -> str:
-        pass
+        for k, v in rough_obj.items():
+            if k in self.SITE_NAME_NAMES:
+                return v
+
+        raise RuntimeError(f"Failed to parse Site Name from {rough_obj}")
 
     def _preparse_meta(self, meta_lines):
         # Key value pairs are separate by some separator provided.

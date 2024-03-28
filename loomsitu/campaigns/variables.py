@@ -82,12 +82,15 @@ class ExtendableVariables:
 
 class ProfileVariables(VariableBase, ExtendableVariables):
     # TODO: map from options
-    SWE = MeasurementDescription("SWE", "SWE", "Snow Water Equivalent")
+    SWE = MeasurementDescription(
+        "SWE", "SWE", "Snow Water Equivalent",
+        ["swe_mm"]
+    )
     # TODO: more variables
     #  temperature
     DEPTH = MeasurementDescription(
         "depth", "depth", "top or center depth of measurement",
-        ["depth", "top"], True
+        ["depth", "top", "sample_top_height", "hs", "depth_m"], True
     )
     BOTTOM_DEPTH = MeasurementDescription(
         "bottom_depth", "bottom_depth", "Lower edge of measurement",
