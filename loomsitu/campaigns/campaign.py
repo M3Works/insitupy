@@ -76,7 +76,6 @@ class ProfileData:
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
-    SAMPLE_PATTERN = "sample"
     VARIABLES = ProfileVariables
 
     def __init__(
@@ -93,6 +92,7 @@ class ProfileData:
         self._depth_layer = self.VARIABLES.DEPTH
         self._lower_depth_layer = self.VARIABLES.BOTTOM_DEPTH
         self._metadata = metadata
+        # TODO: auto parse variable if not given
         self.variable: MeasurementDescription = variable
         # mapping of column name to measurement type
         self._column_mappings = {}
@@ -100,19 +100,25 @@ class ProfileData:
         self._measurements_to_keep = [
             self._depth_layer, self._lower_depth_layer, self.variable
         ]
+        # List of columns that are not the desired variable
         self._non_measure_columns = [
-            self._depth_layer, self._lower_depth_layer, "datetime", "geometry"
+            self._depth_layer.code, self._lower_depth_layer.code, "datetime",
+            "geometry"
         ]
 
         self._id = metadata.id
         self._dt = metadata.date_time
+
+        # This will populate the column mapping
         self._df = self._format_df(input_df)
 
         columns = self._df.columns.values
         if self._depth_layer.code not in columns:
             raise ValueError(f"Expected {self._depth_layer} in columns")
+
+        # Columns related to the variable
         self._sample_columns = [
-            c for c in columns if c not in self._non_measure_columns
+            c for c in columns if self._column_mappings.get(c) == self.variable
         ]
         if len(self._sample_columns) == 0:
             raise ValueError(f"No sample columns in {columns}")
@@ -207,10 +213,15 @@ class ProfileData:
 
         return value
 
-    def get_profile(self, variable, snow_datum="ground"):
+    def get_profile(self, snow_datum="ground"):
         # TODO: snow datum is ground or snow
         # get profile of values
-        return self._df
+        profile_average = self._df.loc[:, self._sample_columns].mean(
+            axis=1)
+        df = self._df.copy()
+        df[self.variable.code] = profile_average
+        columns_of_interest = [*self._non_measure_columns, self.variable.code]
+        return df.loc[:, columns_of_interest]
 
     @classmethod
     def from_file(self, fname, variable: ProfileVariables):
