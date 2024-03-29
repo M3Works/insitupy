@@ -3,8 +3,6 @@ import logging
 from dataclasses import dataclass
 from typing import List
 
-from metloom.variables import VariableBase
-
 
 LOG = logging.getLogger(__name__)
 
@@ -80,7 +78,7 @@ class ExtendableVariables:
         return len(self.entries)
 
 
-class ProfileVariables(VariableBase, ExtendableVariables):
+class ProfileVariables(ExtendableVariables):
     # TODO: map from options
     SWE = MeasurementDescription(
         "SWE", "SWE", "Snow Water Equivalent",
@@ -98,10 +96,22 @@ class ProfileVariables(VariableBase, ExtendableVariables):
     )
     DENSITY = MeasurementDescription(
         "density", "density", "measured snow density",
-        ["density", "density_a", "density_b", "density_c"]
+        ["density", "density_a", "density_b", "density_c", "avg_density"]
     )
     LAYER_THICKNESS = MeasurementDescription(
         "layer_thickness", "layer_thickness", "thickness of layer"
+    )
+    SNOW_TEMPERATURE = MeasurementDescription(
+        "snow_temperature", "snow_temperature", "Snowpack Temperature",
+        ["temperature", "temperature_deg_c"]
+    )
+    LWC = MeasurementDescription(
+        "liquid_water_content","liquid_water_content", "Liquid water content",
+        ["lwc_vol_a", "lwc_vol_b", "lwc", "lwc_vol"]
+    )
+    PERMITTIVITY = MeasurementDescription(
+        "permittivity", "permittivity", "Permittivity",
+        ["permittivity_a", "permittivity_b", "permittivity"]
     )
 
     @classmethod

@@ -101,11 +101,6 @@ class ProfileData:
         self._measurements_to_keep = [
             self._depth_layer, self._lower_depth_layer, self.variable
         ]
-        # List of columns that are not the desired variable
-        self._non_measure_columns = [
-            self._depth_layer.code, self._lower_depth_layer.code, "datetime",
-            "geometry"
-        ]
 
         self._id = metadata.id
         self._dt = metadata.date_time
@@ -116,6 +111,16 @@ class ProfileData:
         columns = self._df.columns.values
         if self._depth_layer.code not in columns:
             raise ValueError(f"Expected {self._depth_layer} in columns")
+
+        # List of columns that are not the desired variable
+        _non_measure_columns = [
+            self._depth_layer.code, self._lower_depth_layer.code,
+            "datetime",
+            "geometry"
+        ]
+        self._non_measure_columns = [
+            c for c in _non_measure_columns if c in columns
+        ]
 
         # Columns related to the variable
         self._sample_columns = [
@@ -200,13 +205,16 @@ class ProfileData:
     def mean(self):
         profile_average = self._df.loc[:, self._sample_columns].mean(
             axis=1)
-        self._df["mean"] = profile_average
+        if pd.isna(profile_average).all():
+            return np.nan
         if self._has_layers:
             # height weighted mean for these layers
             thickness = self._df[self.VARIABLES.LAYER_THICKNESS.code]
+            # this works for a weighted mean, but is not assumed to be
+            # the total thickness of the snowpack
             thickness_total = thickness.sum()
             weighted_mean = (
-                self._df["mean"] * thickness / thickness_total
+                profile_average * thickness / thickness_total
             ).sum()
             value = weighted_mean
         else:
