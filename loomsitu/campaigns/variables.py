@@ -82,10 +82,10 @@ class ProfileVariables(ExtendableVariables):
     # TODO: map from options
     SWE = MeasurementDescription(
         "SWE", "SWE", "Snow Water Equivalent",
-        ["swe_mm"]
+        ["swe_mm", "swe"]
     )
     # TODO: more variables
-    #  temperature
+    #   Next up is Grain Size (mm),Grain Type,Hand Hardness,Manual Wetness,Comments
     DEPTH = MeasurementDescription(
         "depth", "depth", "top or center depth of measurement",
         ["depth", "top", "sample_top_height", "hs", "depth_m"], True
