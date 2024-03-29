@@ -18,9 +18,10 @@ class ProfileMetaData:
     date_time: pd.Timestamp
     latitude: float
     longitude: float
-    utm_zone: str = None
+    utm_epsg: str = None  # the EPSG for the utm zone
     site_id: str = None
     site_name: str = None
+    flags: str = None
 
 
 class MetaDataParser:
@@ -31,21 +32,37 @@ class MetaDataParser:
     ID_NAMES = ["pitid", "pit_id"]
     SITE_ID_NAMES = ["site"]
     SITE_NAME_NAMES = ["location"]
+    LAT_NAMES = ["lat", "latitude"]
+    LON_NAMES = ["lon", "lon", "longitude"]
+    UTM_EPSG_PREFIX = "269"
+    NORTHERN_HEMISPHERE = True
 
     def __init__(self, fname, timezone, header_sep=","):
         self._fname = fname
         self._input_timezone = timezone
         self._header_sep = header_sep
+        self._rough_obj = {}
+        self._lat_lon_easting_northing = None
 
-    def parse_id(self, rough_obj) -> str:
-        for k, v in rough_obj.items():
+    @property
+    def rough_obj(self):
+        return self._rough_obj
+
+    @property
+    def lat_lon_easting_northing(self):
+        if self._lat_lon_easting_northing is None:
+            self._lat_lon_easting_northing = self._parse_location()
+        return self._lat_lon_easting_northing
+
+    def parse_id(self) -> str:
+        for k, v in self.rough_obj.items():
             if k in self.ID_NAMES:
                 return v
 
-        raise RuntimeError(f"Failed to parse ID from {rough_obj}")
+        raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
 
-    def parse_date_time(self, rough_obj) -> pd.Timestamp:
-        keys = [k.lower() for k in rough_obj.keys()]
+    def parse_date_time(self) -> pd.Timestamp:
+        keys = [k.lower() for k in self.rough_obj.keys()]
         d = None
         out_tz = pytz.timezone(self.OUT_TIMEZONE)
         # Convert timezones if it is provided
@@ -61,7 +78,7 @@ class MetaDataParser:
         for k in keys:
             kl = k.lower()
             if 'date' in kl and 'time' in kl:
-                str_date = str(rough_obj[k].replace('T', '-'))
+                str_date = str(self.rough_obj[k].replace('T', '-'))
                 d = pd.to_datetime(str_date)
                 break
 
@@ -70,34 +87,34 @@ class MetaDataParser:
             # Handle data dates and times
             if 'date' in keys and 'time' in keys:
                 # Assume MMDDYY format
-                if len(rough_obj['date']) == 6:
-                    dt = rough_obj['date']
+                if len(self.rough_obj['date']) == 6:
+                    dt = self.rough_obj['date']
                     # Put into YY-MM-DD
-                    rough_obj['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
+                    self.rough_obj['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
                     # Allow for nan time
-                    rough_obj['time'] = StringManager.parse_none(
-                        rough_obj['time']
+                    self.rough_obj['time'] = StringManager.parse_none(
+                        self.rough_obj['time']
                     )
 
-                date_str = rough_obj["date"]
-                if rough_obj["time"] is not None:
-                    date_str += f" {rough_obj['time']}"
+                date_str = self.rough_obj["date"]
+                if self.rough_obj["time"] is not None:
+                    date_str += f" {self.rough_obj['time']}"
                 d = pd.to_datetime(date_str)
 
             elif 'date' in keys:
-                d = pd.to_datetime(rough_obj['date'])
+                d = pd.to_datetime(self.rough_obj['date'])
 
             # Handle gpr data dates
             elif 'utcyear' in keys and 'utcdoy' in keys and 'utctod' in keys:
                 base = pd.to_datetime(
-                    '{:d}-01-01 00:00:00 '.format(int(rough_obj['utcyear'])),
+                    '{:d}-01-01 00:00:00 '.format(int(self.rough_obj['utcyear'])),
                     utc=True)
 
                 # Number of days since january 1
-                d = int(rough_obj['utcdoy']) - 1
+                d = int(self.rough_obj['utcdoy']) - 1
 
                 # Zulu time (time without colons)
-                time = str(rough_obj['utctod'])
+                time = str(self.rough_obj['utctod'])
                 hr = int(time[0:2])  # hours
                 mm = int(time[2:4])  # minutes
                 ss = int(time[4:6])  # seconds
@@ -126,46 +143,115 @@ class MetaDataParser:
         else:
             d.replace(tzinfo=out_tz)
 
-        rough_obj['date'] = d.date()
+        self.rough_obj['date'] = d.date()
 
         # Dont add time to a time that was nan or none
-        if 'time' not in rough_obj.keys():
-            rough_obj['time'] = d.timetz()
+        if 'time' not in self.rough_obj.keys():
+            self.rough_obj['time'] = d.timetz()
         else:
-            if rough_obj['time'] is not None:
-                rough_obj['time'] = d.timetz()
+            if self.rough_obj['time'] is not None:
+                self.rough_obj['time'] = d.timetz()
 
-        dt_str = rough_obj["date"].isoformat()
-        if rough_obj.get("time"):
-            dt_str += f"T{rough_obj['time'].isoformat()}"
+        dt_str = self.rough_obj["date"].isoformat()
+        if self.rough_obj.get("time"):
+            dt_str += f"T{self.rough_obj['time'].isoformat()}"
         dt = pd.to_datetime(dt_str)
 
         return dt
 
-    def parse_latitude(self, rough_obj) -> float:
-        raise NotImplementedError()
+    def _parse_location(self):
+        """
+        Parse the lat and lon from the rough input object
+        Also parse the easting and northing
+        # UTM Zone,13N
+        # Easting,329131
+        # Northing,4310328
+        # Latitude,38.92524
+        # Longitude,-106.97112
+        # Flags,
 
-    def parse_longitude(self, rough_obj) -> float:
-        raise NotImplementedError()
+        returns lat, lon, easting, northing
+        """
+        lat = None
+        lon = None
+        easting = None
+        northing = None
+        for k, v in self.rough_obj.items():
+            if k in self.LAT_NAMES:
+                lat = float(v)
+            elif k in self.LON_NAMES:
+                lon = float(v)
+            elif k == "easting":
+                easting = v
+            elif k == "northing":
+                northing = v
 
-    def parse_utm_zone(self, rough_obj) -> str:
-        raise NotImplementedError()
+        # Do nothing first
+        if lat and lon and easting and northing:
+            LOG.info("All location info is in the file")
+        elif lat and lon:
+            # do we want to do this?
+            # zone_number = self.parse_utm_epsg()[-2:]
+            # LOG.debug("Calculating the easting and northing")
+            # easting, northing, *_ = utm.from_latlon(
+            #     lat, lon, force_zone_number=int(zone_number)
+            # )
+            pass
+        elif easting and northing:
+            zone_number = self.parse_utm_epsg()[-2:]
+            lat, lon = utm.to_latlon(
+                easting, northing, int(zone_number),
+                northern=self.NORTHERN_HEMISPHERE)
+        else:
+            raise ValueError(
+                f"Could not parse location from {self.rough_obj}"
+            )
+        return lat, lon, easting, northing
 
-    def parse_site_id(self, rough_obj) -> str:
-        for k, v in rough_obj.items():
+    def parse_latitude(self) -> float:
+        return self.lat_lon_easting_northing[0]
+
+    def parse_longitude(self) -> float:
+        return self.lat_lon_easting_northing[1]
+
+    def parse_utm_epsg(self) -> str:
+        info = self.rough_obj
+        epsg = None
+        if 'utm_zone' in info.keys():
+            utm_zone = int(
+                ''.join([c for c in info['utm_zone'] if c.isnumeric()]))
+            epsg = int(f"{self.UTM_EPSG_PREFIX}{utm_zone}")
+        elif 'epsg' in info.keys():
+            epsg = info["epsg"]
+        return epsg
+
+    def parse_site_id(self) -> str:
+        for k, v in self.rough_obj.items():
             if k in self.SITE_ID_NAMES:
                 return v
 
-        raise RuntimeError(f"Failed to parse Site ID from {rough_obj}")
+        raise RuntimeError(f"Failed to parse Site ID from {self.rough_obj}")
 
-    def parse_site_name(self, rough_obj) -> str:
-        for k, v in rough_obj.items():
+    def parse_site_name(self) -> str:
+        for k, v in self.rough_obj.items():
             if k in self.SITE_NAME_NAMES:
                 return v
 
-        raise RuntimeError(f"Failed to parse Site Name from {rough_obj}")
+        raise RuntimeError(f"Failed to parse Site Name from {self.rough_obj}")
+
+    def parse_flags(self):
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in ["flags"]:
+                result = v
+                break
+
+        return result
 
     def _preparse_meta(self, meta_lines):
+        """
+        Organize the header lines into a dictionary with lower case keys
+        """
         # Key value pairs are separate by some separator provided.
         data = {}
 
@@ -196,19 +282,24 @@ class MetaDataParser:
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
         metadata
+
+        This populates self.rough_obj
+
+        Returns:
+            (metadata object, column list, position of header in file)
         """
         meta_lines, columns, header_position = self._read(self._fname)
-        rough_obj = self._preparse_meta(meta_lines)
-
-        # TODO: do these replace parse header?
+        self._rough_obj = self._preparse_meta(meta_lines)
+        # Create a standard metadata object
         metadata = ProfileMetaData(
-            id=self.parse_id(rough_obj),
-            date_time=self.parse_date_time(rough_obj),
-            latitude=self.parse_latitude(rough_obj),
-            longitude=self.parse_longitude(rough_obj),
-            utm_zone=self.parse_utm_zone(rough_obj),
-            site_id=self.parse_site_id(rough_obj),
-            site_name=self.parse_site_name(rough_obj),
+            id=self.parse_id(),
+            date_time=self.parse_date_time(),
+            latitude=self.parse_latitude(),
+            longitude=self.parse_longitude(),
+            utm_epsg=self.parse_utm_epsg(),
+            site_id=self.parse_site_id(),
+            site_name=self.parse_site_name(),
+            flags=self.parse_flags(),
         )
 
         return metadata, columns, header_position
@@ -779,119 +870,6 @@ class DataHeader(MetaMixIn):
 
         return data_names, multi_sample_profiles
 
-    @classmethod
-    def add_date_time_keys(cls, data, in_timezone=None, out_timezone='UTC'):
-        """
-        Convert string info from a date/time keys in a dictionary to date and time
-        objects and assign it back to the dictionary as date and time
-
-        Args:
-            data: dictionary containing either the keys date/time or two keys date
-                  and time
-            in_timezone: String representing Pytz valid timezone of the data coming in
-            out_timezone: String representing Pytz valid timezone of the data being returned
-
-        Returns:
-            d: Python Datetime object
-        """
-        keys = [k.lower() for k in data.keys()]
-        d = None
-        out_tz = pytz.timezone(out_timezone)
-        in_tz = None
-
-        # Convert timezones if it is provided
-        if in_timezone is not None:
-            in_tz = pytz.timezone(in_timezone)
-
-        # Otherwise assume incoming data is the same timezone
-        else:
-            raise ValueError("We did not recieve a valid in_timezone")
-
-        # Look for a single header entry containing date and time.
-        for k in data.keys():
-            kl = k.lower()
-            if 'date' in kl and 'time' in kl:
-                str_date = str(data[k].replace('T', '-'))
-                d = pd.to_datetime(str_date)
-                break
-
-        # If we didn't find date/time combined.
-        if d is None:
-            # Handle data dates and times
-            if 'date' in keys and 'time' in keys:
-                # Assume MMDDYY format
-                if len(data['date']) == 6:
-                    dt = data['date']
-                    # Put into YY-MM-DD
-                    data['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
-                    # Allow for nan time
-                    data['time'] = StringManager.parse_none(data['time'])
-
-                dstr = ' '.join([str(data[k]) for k in ['date', 'time']
-                                 if data[k] is not None])
-                d = pd.to_datetime(dstr)
-
-            elif 'date' in keys:
-                d = pd.to_datetime(data['date'])
-
-            # Handle gpr data dates
-            elif 'utcyear' in keys and 'utcdoy' in keys and 'utctod' in keys:
-                base = pd.to_datetime(
-                    '{:d}-01-01 00:00:00 '.format(int(data['utcyear'])),
-                    utc=True)
-
-                # Number of days since january 1
-                d = int(data['utcdoy']) - 1
-
-                # Zulu time (time without colons)
-                time = str(data['utctod'])
-                hr = int(time[0:2])  # hours
-                mm = int(time[2:4])  # minutes
-                ss = int(time[4:6])  # seconds
-                ms = int(
-                    float('0.' + time.split('.')[-1]) * 1000)  # milliseconds
-
-                delta = timedelta(
-                    days=d,
-                    hours=hr,
-                    minutes=mm,
-                    seconds=ss,
-                    milliseconds=ms)
-                # This is the only key set that ignores in_timezone
-                d = base.astimezone(pytz.timezone('UTC')) + delta
-
-                # Avoid using in_timezone and UTC defined keys
-                in_timezone = None
-
-                d = d.astimezone(out_tz)
-
-            else:
-                raise ValueError(
-                    'Data is missing date/time info!\n{}'.format(data))
-
-        if in_timezone is not None:
-            d = d.tz_localize(in_tz)
-            d = d.astimezone(out_tz)
-
-        else:
-            d.replace(tzinfo=out_tz)
-
-        data['date'] = d.date()
-
-        # Dont add time to a time that was nan or none
-        if 'time' not in data.keys():
-            data['time'] = d.timetz()
-        else:
-            if data['time'] is not None:
-                data['time'] = d.timetz()
-
-        dt_str = data["date"].isoformat()
-        if data.get("time"):
-            dt_str += f"T{data['time'].isoformat()}"
-        dt = pd.to_datetime(dt_str)
-        data["date_time"] = dt
-
-        return data
 
     def _read(self, filename):
         """
