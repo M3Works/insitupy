@@ -371,7 +371,7 @@ class MetaDataParser:
                    **header_pos** - Index of the columns header for skiprows in
                                     read_csv
        """
-
+        filename = str(filename)
         with open(filename, encoding='latin') as fp:
             lines = fp.readlines()
             fp.close()

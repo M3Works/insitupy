@@ -243,19 +243,10 @@ class SnowExProfileData(ProfileData):
     def from_file(cls, fname, variable: MeasurementDescription):
         # TODO: timezone here (mapped from site?)
         meta_parser = cls.META_PARSER(fname, "US/Mountain")
+        # Parse the metadata and column info
         metadata, columns, header_pos = meta_parser.parse()
-        # metadata = ProfileMetaData(
-        #     id=header.info["pit_id"],
-        #     date_time=header.info["date_time"],
-        #     latitude=header.info["latitude"],
-        #     longitude=header.info["longitude"],
-        #     utm_zone=header.info.get("utm_zone"),
-        #     site_id=header.info["site_id"],
-        #     site_name=header.info["site_name"]
-        # )
-        # TODO: include variable in this parsing
+        # read in the actual data
         data = cls._read(fname, columns, header_pos)
-        # Filter to desired variables
 
         return cls(data, metadata, variable)
 
