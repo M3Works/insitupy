@@ -10,8 +10,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from loomsitu.campaigns.metadata import MetaDataParser, ProfileMetaData
-from loomsitu.campaigns.variables import ProfileVariables, MeasurementDescription
+from .metadata import MetaDataParser, ProfileMetaData
+from .variables import ProfileVariables, MeasurementDescription
 
 """
 

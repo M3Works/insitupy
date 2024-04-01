@@ -6,8 +6,8 @@ import pandas as pd
 import pytz
 import utm
 
-from loomsitu.campaigns.strings import StringManager
-from loomsitu.campaigns.variables import ProfileVariables, MeasurementDescription
+from .strings import StringManager
+from .variables import ProfileVariables
 
 LOG = logging.getLogger(__name__)
 
@@ -134,7 +134,8 @@ class MetaDataParser:
 
             else:
                 raise ValueError(
-                    'Data is missing date/time info!\n{}'.format(rough_obj))
+                    f'Data is missing date/time info!\n{self.rough_obj}'
+                )
 
         if in_timezone is not None:
             d = d.tz_localize(in_tz)
@@ -400,7 +401,7 @@ class MetaDataParser:
 
     def _find_header_position(self, lines):
         """
-        A flexible mnethod that attempts to find and standardize column names
+        A flexible method that attempts to find and standardize column names
         for csv data. Looks for a comma separated line with N entries == to the
         last line in the file. If an entry is found with more commas than the
         last line then we use that. This allows us to have data that doesn't
