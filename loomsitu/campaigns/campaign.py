@@ -68,9 +68,6 @@ Big pluses
 LOG = logging.getLogger(__name__)
 
 
-
-
-
 class ProfileData:
     """
     This would be one pit, SMP profile, etc
@@ -221,6 +218,11 @@ class ProfileData:
             value = np.mean(profile_average)
 
         return value
+
+    @property
+    def total_depth(self):
+        profile = self._df.loc[:, self._depth_layer.code].values
+        return np.nanmax(profile)
 
     def get_profile(self, snow_datum="ground"):
         # TODO: snow datum is ground or snow

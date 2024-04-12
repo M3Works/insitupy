@@ -6,9 +6,7 @@ import pytest
 from loomsitu.campaigns.metadata import MetaDataParser
 
 
-DATA_PATH = Path(__file__).parent.joinpath(
-        "data/snowex/pits/"
-    ).expanduser().absolute()
+
 
 
 @pytest.mark.parametrize(
@@ -25,10 +23,10 @@ class TestSnowexPitMetadata:
     """
 
     @pytest.fixture
-    def metadata_info(self, fname):
+    def metadata_info(self, fname, data_path):
         # This is the parser object
         obj = MetaDataParser(
-            DATA_PATH.joinpath(fname), "US/Mountain"
+            data_path.joinpath(fname), "US/Mountain"
         )
         metadata, columns, header_pos = obj.parse()
         return metadata, columns, header_pos
@@ -78,7 +76,6 @@ class TestSnowexPitMetadata:
         assert header_pos == 10
 
 
-
 @pytest.mark.parametrize(
     "fname, expected_cols", [
         ("SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
@@ -90,12 +87,12 @@ class TestSnowexPitMetadata:
          ['depth', 'temperature'])
     ]
 )
-def test_columns(fname, expected_cols):
+def test_columns(fname, expected_cols, data_path):
     """
     Test the columns we expect to pass back from the file
     """
     obj = MetaDataParser(
-        DATA_PATH.joinpath(fname), "US/Mountain"
+        data_path.joinpath(fname), "US/Mountain"
     )
     metadata, columns, header_pos = obj.parse()
     assert columns == expected_cols
