@@ -4,14 +4,15 @@ import pytest
 from insitupy.campaigns.strings import StringManager
 
 
-@pytest.mark.parametrize("in_str, expected", [
-    ('SMP instrument #', 'smp_instrument_#'),
-    ('Dielectric Constant A', 'dielectric_constant_a'),
-    ('Specific surface area (m^2/kg)', 'specific_surface_area'),
-    # Ensure we remove a csv byte order mark in latin encoding
-    ("ï»¿Camera", "camera"),
-    (' Temperature \n', 'temperature')
-]
+@pytest.mark.parametrize(
+    "in_str, expected", [
+            ('SMP instrument #', 'smp_instrument_#'),
+            ('Dielectric Constant A', 'dielectric_constant_a'),
+            ('Specific surface area (m^2/kg)', 'specific_surface_area'),
+            # Ensure we remove a csv byte order mark in latin encoding
+            ("ï»¿Camera", "camera"),
+            (' Temperature \n', 'temperature')
+        ]
     )
 def test_standardize_key(in_str, expected):
     """
@@ -51,12 +52,13 @@ def test_get_encapsulated(args, kwargs):
             results = StringManager.get_encapsulated(s, encaps)
 
 
-@pytest.mark.parametrize('s, encaps, expected', [
-    ('Density [kg/m^3], Date [yyyymmdd]', '[]', 'Density , Date '),
-    ('Time (seconds)', '()', 'Time '),
-    ('Name "Surveyor"', '"', 'Name '),
-    # test for mm and comments exchange
-    ('grain_size (mm), comments', '()', 'grain_size , comments')
+@pytest.mark.parametrize(
+    's, encaps, expected', [
+        ('Density [kg/m^3], Date [yyyymmdd]', '[]', 'Density , Date '),
+        ('Time (seconds)', '()', 'Time '),
+        ('Name "Surveyor"', '"', 'Name '),
+        # test for mm and comments exchange
+        ('grain_size (mm), comments', '()', 'grain_size , comments')
     ])
 def test_strip_encapsulated(s, encaps, expected):
     """
