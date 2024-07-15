@@ -16,7 +16,14 @@ loomsitu
 
 
 
-Weave insitu data together
+Manage reading and analyzing raw files of insitu data. The goal is to get
+raw insitu data files into manageable classes with helpful functions and provide
+access to the data as GeoPandas Arrays.
+
+The first application of this will be for SnowEx pit data.
+
+THIS IS A WORK IN PROGRESS (use at your own risk as outlined in the MIT license). We
+fully welcome any contribution and ideas. Snow science works better together!
 
 
 * Free software: MIT license
