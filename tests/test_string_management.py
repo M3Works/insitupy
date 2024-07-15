@@ -22,7 +22,10 @@ def test_standardize_key(in_str, expected):
 
 @pytest.mark.parametrize('args, kwargs', [
     # Test multiple values being returned
-    (['Density [kg/m^3], Date [yyyymmdd]', '[]', ['kg/m^3', 'yyyymmdd']], {'errors': False}),
+    (
+        ['Density [kg/m^3], Date [yyyymmdd]', '[]', ['kg/m^3', 'yyyymmdd']],
+        {'errors': False}
+    ),
     # Test single value being return with parenthese
     (['Time (seconds)', '()', ['seconds']], {'errors': False}),
     # Test Single encapsulator used as both
@@ -55,7 +58,6 @@ def test_get_encapsulated(args, kwargs):
     # test for mm and comments exchange
     ('grain_size (mm), comments', '()', 'grain_size , comments')
     ])
-
 def test_strip_encapsulated(s, encaps, expected):
     """
     Test where we can remove chars in a string
@@ -92,19 +94,26 @@ def test_get_alpha_ratio(str_line, encapsulator, expected):
     assert result == expected
 
 
-@pytest.mark.parametrize("line, header_sep, header_indicator, previous_alpha_ratio, expected_columns, expected", [
-    # Test using a header indicator is the end all.
-    ("# flags, ", None, '#', None, None, True),
-    ("flags, ", None, '#', None, None, False),
+@pytest.mark.parametrize(
+    "line, header_sep, header_indicator, previous_alpha_ratio,"
+    "expected_columns, expected", [
+        # Test using a header indicator is the end all.
+        ("# flags, ", None, '#', None, None, True),
+        ("flags, ", None, '#', None, None, False),
 
-    # Simple looking for 2 columns
-    ("# flags, ", ',', None, None, 2, True),
-    # Test with a real entry from stratigraphy which has lots of chars
-    ("35.0,33.0,< 1 mm,DF,F,D,NaN", ',', '#', 7, 0.5, False),
-    # Test a complicated string with encapsulation right after a normal header
-    ('107.0,85.0,< 1 mm,FC,4F,D,"Variable."', ',', '#', 7, 1, False),
-
-])
-def test_line_is_header(line, header_sep, header_indicator, previous_alpha_ratio, expected_columns, expected):
-    result = StringManager.line_is_header(line, header_sep, header_indicator, previous_alpha_ratio, expected_columns)
+        # Simple looking for 2 columns
+        ("# flags, ", ',', None, None, 2, True),
+        # Test with a real entry from stratigraphy which has lots of chars
+        ("35.0,33.0,< 1 mm,DF,F,D,NaN", ',', '#', 7, 0.5, False),
+        # Test a complicated string with encapsulation right after a normal header
+        ('107.0,85.0,< 1 mm,FC,4F,D,"Variable."', ',', '#', 7, 1, False),
+    ])
+def test_line_is_header(
+    line, header_sep, header_indicator, previous_alpha_ratio,
+    expected_columns, expected
+):
+    result = StringManager.line_is_header(
+        line, header_sep, header_indicator, previous_alpha_ratio,
+        expected_columns
+    )
     assert result == expected

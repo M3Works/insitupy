@@ -106,7 +106,7 @@ class ProfileVariables(ExtendableVariables):
         ["temperature", "temperature_deg_c"]
     )
     LWC = MeasurementDescription(
-        "liquid_water_content","liquid_water_content", "Liquid water content",
+        "liquid_water_content", "liquid_water_content", "Liquid water content",
         ["lwc_vol_a", "lwc_vol_b", "lwc", "lwc_vol"]
     )
     PERMITTIVITY = MeasurementDescription(
@@ -143,4 +143,3 @@ class ProfileVariables(ExtendableVariables):
             f"Mapping {result} to {result} (type {column_mapping[result]})"
         )
         return result, column_mapping
-

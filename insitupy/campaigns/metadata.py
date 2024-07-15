@@ -61,6 +61,66 @@ class MetaDataParser:
 
         raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
 
+    def _handle_separate_datetime(self, keys, out_tz):
+        """
+        Handle a separate date and time entry
+
+        Args:
+            keys: list of keys
+            out_tz: desired timezone
+        Returns:
+            parsed datetime
+        """
+        # Handle data dates and times
+        if 'date' in keys and 'time' in keys:
+            # Assume MMDDYY format
+            if len(self.rough_obj['date']) == 6:
+                dt = self.rough_obj['date']
+                # Put into YY-MM-DD
+                self.rough_obj['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
+                # Allow for nan time
+                self.rough_obj['time'] = StringManager.parse_none(
+                    self.rough_obj['time']
+                )
+
+            date_str = self.rough_obj["date"]
+            if self.rough_obj["time"] is not None:
+                date_str += f" {self.rough_obj['time']}"
+            d = pd.to_datetime(date_str)
+
+        elif 'date' in keys:
+            d = pd.to_datetime(self.rough_obj['date'])
+
+        # Handle gpr data dates
+        elif 'utcyear' in keys and 'utcdoy' in keys and 'utctod' in keys:
+            base = pd.to_datetime(
+                '{:d}-01-01 00:00:00 '.format(int(self.rough_obj['utcyear'])),
+                utc=True)
+
+            # Number of days since january 1
+            d = int(self.rough_obj['utcdoy']) - 1
+
+            # Zulu time (time without colons)
+            time = str(self.rough_obj['utctod'])
+            hr = int(time[0:2])  # hours
+            mm = int(time[2:4])  # minutes
+            ss = int(time[4:6])  # seconds
+            ms = int(
+                float('0.' + time.split('.')[-1]) * 1000)  # milliseconds
+
+            delta = timedelta(
+                days=d, hours=hr, minutes=mm, seconds=ss, milliseconds=ms
+            )
+            # This is the only key set that ignores in_timezone
+            d = base.astimezone(pytz.timezone('UTC')) + delta
+            d = d.astimezone(out_tz)
+
+        else:
+            raise ValueError(
+                f'Data is missing date/time info!\n{self.rough_obj}'
+            )
+        return d
+
     def parse_date_time(self) -> pd.Timestamp:
         keys = [k.lower() for k in self.rough_obj.keys()]
         d = None
@@ -84,58 +144,7 @@ class MetaDataParser:
 
         # If we didn't find date/time combined.
         if d is None:
-            # Handle data dates and times
-            if 'date' in keys and 'time' in keys:
-                # Assume MMDDYY format
-                if len(self.rough_obj['date']) == 6:
-                    dt = self.rough_obj['date']
-                    # Put into YY-MM-DD
-                    self.rough_obj['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
-                    # Allow for nan time
-                    self.rough_obj['time'] = StringManager.parse_none(
-                        self.rough_obj['time']
-                    )
-
-                date_str = self.rough_obj["date"]
-                if self.rough_obj["time"] is not None:
-                    date_str += f" {self.rough_obj['time']}"
-                d = pd.to_datetime(date_str)
-
-            elif 'date' in keys:
-                d = pd.to_datetime(self.rough_obj['date'])
-
-            # Handle gpr data dates
-            elif 'utcyear' in keys and 'utcdoy' in keys and 'utctod' in keys:
-                base = pd.to_datetime(
-                    '{:d}-01-01 00:00:00 '.format(int(self.rough_obj['utcyear'])),
-                    utc=True)
-
-                # Number of days since january 1
-                d = int(self.rough_obj['utcdoy']) - 1
-
-                # Zulu time (time without colons)
-                time = str(self.rough_obj['utctod'])
-                hr = int(time[0:2])  # hours
-                mm = int(time[2:4])  # minutes
-                ss = int(time[4:6])  # seconds
-                ms = int(
-                    float('0.' + time.split('.')[-1]) * 1000)  # milliseconds
-
-                delta = timedelta(
-                    days=d, hours=hr, minutes=mm, seconds=ss, milliseconds=ms
-                )
-                # This is the only key set that ignores in_timezone
-                d = base.astimezone(pytz.timezone('UTC')) + delta
-
-                # Avoid using in_timezone and UTC defined keys
-                in_timezone = None
-
-                d = d.astimezone(out_tz)
-
-            else:
-                raise ValueError(
-                    f'Data is missing date/time info!\n{self.rough_obj}'
-                )
+            d = self._handle_separate_datetime(keys, out_tz)
 
         if in_timezone is not None:
             d = d.tz_localize(in_tz)
@@ -146,7 +155,7 @@ class MetaDataParser:
 
         self.rough_obj['date'] = d.date()
 
-        # Dont add time to a time that was nan or none
+        # Don't add time to a time that was nan or none
         if 'time' not in self.rough_obj.keys():
             self.rough_obj['time'] = d.timetz()
         else:
@@ -272,7 +281,9 @@ class MetaDataParser:
 
             # Assign non empty strings to dictionary
             if k and value:
-                data[k] = value.strip(' ').replace('"', '').replace('  ', ' ')
+                data[k] = value.strip(
+                    ' '
+                ).replace('"', '').replace('  ', ' ')
 
             elif k and not value:
                 data[k] = None
@@ -356,9 +367,9 @@ class MetaDataParser:
 
     def _read(self, filename):
         """
-        Read in all site details file for a pit If the filename has the word site in it then we
-        read everything in the file. Otherwise we use this to read all the site
-        data up to the header of the profile.
+        Read in all site details file for a pit If the filename has the word
+        site in it then we read everything in the file. Otherwise, we use this
+        to read all the site data up to the header of the profile.
 
         E.g. Read all commented data until we see a column descriptor.
 

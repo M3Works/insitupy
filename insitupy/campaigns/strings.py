@@ -152,7 +152,8 @@ class StringManager:
         key = key.lower().replace(' ', '_')
         key = key.lower().replace('-', '_')
 
-        # This removes csv byte order mark for files in utf-8 while were encoding with latin
+        # This removes csv byte order mark for files in utf-8
+        # while were encoding with latin
         key = ''.join([c for c in key if c not in 'ï»¿'])
 
         return key

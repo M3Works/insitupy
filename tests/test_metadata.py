@@ -1,12 +1,7 @@
-from pathlib import Path
-
 import pandas as pd
 import pytest
 
 from insitupy.campaigns.metadata import MetaDataParser
-
-
-
 
 
 @pytest.mark.parametrize(
