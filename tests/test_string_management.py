@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from loomsitu.campaigns.strings import StringManager
+from insitupy.campaigns.strings import StringManager
 
 
 @pytest.mark.parametrize("in_str, expected", [

@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from loomsitu.campaigns.metadata import MetaDataParser
+from insitupy.campaigns.metadata import MetaDataParser
 
 
 

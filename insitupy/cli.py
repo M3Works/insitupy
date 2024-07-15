@@ -1,17 +1,17 @@
-"""Console script for loomsitu."""
+"""Console script for insitupy."""
 import argparse
 import sys
 
 
 def main():
-    """Console script for loomsitu."""
+    """Console script for insitupy."""
     parser = argparse.ArgumentParser()
     parser.add_argument('_', nargs='*')
     args = parser.parse_args()
 
     print("Arguments: " + str(args._))
     print("Replace this message by putting your code into "
-          "loomsitu.cli.main")
+          "insitupy.cli.main")
     return 0
 
 

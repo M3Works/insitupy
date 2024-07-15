@@ -1,1 +1,1 @@
-"""Unit test package for loomsitu."""
+"""Unit test package for insitupy."""

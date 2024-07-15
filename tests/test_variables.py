@@ -1,6 +1,6 @@
 import pytest
 
-from loomsitu.campaigns.variables import ProfileVariables
+from insitupy.campaigns.variables import ProfileVariables
 
 
 class TestVariables:
