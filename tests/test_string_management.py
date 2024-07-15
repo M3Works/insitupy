@@ -6,14 +6,14 @@ from insitupy.campaigns.strings import StringManager
 
 @pytest.mark.parametrize(
     "in_str, expected", [
-            ('SMP instrument #', 'smp_instrument_#'),
-            ('Dielectric Constant A', 'dielectric_constant_a'),
-            ('Specific surface area (m^2/kg)', 'specific_surface_area'),
-            # Ensure we remove a csv byte order mark in latin encoding
-            ("ï»¿Camera", "camera"),
-            (' Temperature \n', 'temperature')
-        ]
-    )
+        ('SMP instrument #', 'smp_instrument_#'),
+        ('Dielectric Constant A', 'dielectric_constant_a'),
+        ('Specific surface area (m^2/kg)', 'specific_surface_area'),
+        # Ensure we remove a csv byte order mark in latin encoding
+        ("ï»¿Camera", "camera"),
+        (' Temperature \n', 'temperature')
+    ]
+)
 def test_standardize_key(in_str, expected):
     """
     Test whether we can clean out the column header from a csv and standardize them
