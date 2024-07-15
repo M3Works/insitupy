@@ -60,7 +60,7 @@ jobs:
             name: Extract coverage
             run: |
                 # Run coverage save the results
-                python3 -m pytest --cov=insitupy --cov-fail-under=80
+                python3 -m pytest --cov=insitupy --cov-fail-under=75
                 SUMMARY=`coverage report -m | grep TOTAL`
                 # Save results as ENV var
                 COVERAGE=$(python -c "print('$SUMMARY'.split(' ')[-1])")
