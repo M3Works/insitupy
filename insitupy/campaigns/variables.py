@@ -177,3 +177,8 @@ class SnowExProfileVariables(ProfileVariables):
         "parameter_codes", "parameter_codes", "Parameter Codes",
         ["parameter_codes"]
     )
+    TIME_BOUND_PIT = MeasurementDescription(
+        "Time start/end", "Time start/end",
+        "Time of first or last pit measurement",
+        ["Time start/end", "time_start/end"]
+    )
