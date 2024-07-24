@@ -79,7 +79,36 @@ class ExtendableVariables:
 
 
 class ProfileVariables(ExtendableVariables):
-    # TODO: map from options
+    @classmethod
+    def from_mapping(cls, input_name):
+        """
+        Get the measurement description from an input name.
+        This will use the  MeasurementDescription.map_from list to
+        check, in order, which variable we should use
+
+        Returns:
+            column name
+            column mapping (map of name to MeasurementDescription)
+        """
+        result = None
+        # Map column name to variable type
+        column_mapping = {}
+        for entry in cls():
+            if entry.map_from and input_name.lower() in entry.map_from:
+                # Remap to code
+                if entry.remap:
+                    result = entry.code
+                else:
+                    result = input_name
+                column_mapping[result] = entry
+                break
+        if result is None:
+            raise RuntimeError(f"Could not find mapping for {input_name}")
+        LOG.debug(
+            f"Mapping {result} to {result} (type {column_mapping[result]})"
+        )
+        return result, column_mapping
+
     SWE = MeasurementDescription(
         "SWE", "SWE", "Snow Water Equivalent",
         ["swe_mm", "swe"]
@@ -113,33 +142,38 @@ class ProfileVariables(ExtendableVariables):
         "permittivity", "permittivity", "Permittivity",
         ["permittivity_a", "permittivity_b", "permittivity"]
     )
+    GRAIN_SIZE = MeasurementDescription(
+        "grain_size", "grain_size", "Grain Size",
+        ["grain_size"]
+    )
+    GRAIN_TYPE = MeasurementDescription(
+        "grain_type", "grain_type", "Grain Type",
+        ["grain_type"]
+    )
+    HAND_HARDNESS = MeasurementDescription(
+        "hand_hardness", "hand_hardness", "Hand Hardness",
+        ["hand_hardness"]
+    )
+    MANUAL_WETNESS = MeasurementDescription(
+        "manual_wetness", "manual_wetness", "Manual Wetness",
+        ["manual_wetness"]
+    )
 
-    @classmethod
-    def from_mapping(cls, input_name):
-        """
-        Get the measurement description from an input name.
-        This will use the  MeasurementDescription.map_from list to
-        check, in order, which variable we should use
 
-        Returns:
-            column name
-            column mapping (map of name to MeasurementDescription)
-        """
-        result = None
-        # Map column name to variable type
-        column_mapping = {}
-        for entry in cls():
-            if entry.map_from and input_name.lower() in entry.map_from:
-                # Remap to code
-                if entry.remap:
-                    result = entry.code
-                else:
-                    result = input_name
-                column_mapping[result] = entry
-                break
-        if result is None:
-            raise RuntimeError(f"Could not find mapping for {input_name}")
-        LOG.debug(
-            f"Mapping {result} to {result} (type {column_mapping[result]})"
-        )
-        return result, column_mapping
+class SnowExProfileVariables(ProfileVariables):
+    COMMENTS = MeasurementDescription(
+        "comments", "comments", "Comments",
+        ["comments"]
+    )
+    PIT_COMMENTS = MeasurementDescription(
+        "pit_comments", "pit_comments", "Pit Comments",
+        ["pit_comments"]
+    )
+    COUNT = MeasurementDescription(
+        "count", "count", "Count for surrounding perimeter depths",
+        ["count"]
+    )
+    PARAMETER_CODES = MeasurementDescription(
+        "parameter_codes", "parameter_codes", "Parameter Codes",
+        ["parameter_codes"]
+    )

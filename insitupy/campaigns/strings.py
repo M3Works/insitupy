@@ -190,7 +190,7 @@ class StringManager:
     def line_is_header(cls, str_line, header_sep=',', header_indicator='#',
                        previous_alpha_ratio=None, expected_columns=None):
         """
-        Determine is line 1 is a header line
+        Determine is line 1 a header line
         """
         # Definitive indication of a header line
         if header_indicator:

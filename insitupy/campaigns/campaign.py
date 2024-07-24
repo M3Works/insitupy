@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 
 from .metadata import MetaDataParser, ProfileMetaData
-from .variables import ProfileVariables, MeasurementDescription
+from .variables import ProfileVariables, MeasurementDescription, \
+    SnowExProfileVariables
 
 """
 
@@ -143,7 +144,7 @@ class ProfileData:
         # Get rid of columns we don't want and populate column mapping
         columns = input_df.columns.values
         for c in columns:
-            cn, cm = ProfileVariables.from_mapping(c)
+            cn, cm = self.VARIABLES.from_mapping(c)
             # join with existing mappings
             self._column_mappings = {**cm, **self._column_mappings}
 
@@ -243,7 +244,13 @@ class ProfileData:
         raise NotImplementedError("Not implemented")
 
 
+class SnowExMetadataParser(MetaDataParser):
+    VARIABLES_CLASS = SnowExProfileVariables
+
+
 class SnowExProfileData(ProfileData):
+    VARIABLES = SnowExProfileVariables
+    META_PARSER = SnowExMetadataParser
 
     @classmethod
     def from_file(cls, fname, variable: MeasurementDescription):
