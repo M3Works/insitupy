@@ -19,6 +19,8 @@ class MeasurementDescription:
     description: str = None  # description of the sensor
     map_from: List = None  # map to this variable from a list of options
     remap: bool = False  # Auto remap to the column to the code
+    # TODO: optional unit we get form 'parse_from' method
+    # unit: str = None
 
 
 class ExtendableVariables:
@@ -113,8 +115,6 @@ class ProfileVariables(ExtendableVariables):
         "SWE", "SWE", "Snow Water Equivalent",
         ["swe_mm", "swe"]
     )
-    # TODO: more variables
-    #   Next up is Grain Size (mm),Grain Type,Hand Hardness,Manual Wetness,Comments
     DEPTH = MeasurementDescription(
         "depth", "depth", "top or center depth of measurement",
         ["depth", "top", "sample_top_height", "hs", "depth_m"], True
@@ -125,7 +125,10 @@ class ProfileVariables(ExtendableVariables):
     )
     DENSITY = MeasurementDescription(
         "density", "density", "measured snow density",
-        ["density", "density_a", "density_b", "density_c", "avg_density"]
+        [
+            "density", "density_a", "density_b", "density_c", "avg_density",
+            "avgdensity", 'density_mean'
+        ]
     )
     LAYER_THICKNESS = MeasurementDescription(
         "layer_thickness", "layer_thickness", "thickness of layer"
@@ -140,7 +143,7 @@ class ProfileVariables(ExtendableVariables):
     )
     PERMITTIVITY = MeasurementDescription(
         "permittivity", "permittivity", "Permittivity",
-        ["permittivity_a", "permittivity_b", "permittivity"]
+        ["permittivity_a", "permittivity_b", "permittivity", 'dielectric_constant']
     )
     GRAIN_SIZE = MeasurementDescription(
         "grain_size", "grain_size", "Grain Size",
@@ -181,4 +184,76 @@ class SnowExProfileVariables(ProfileVariables):
         "Time start/end", "Time start/end",
         "Time of first or last pit measurement",
         ["Time start/end", "time_start/end"]
+    )
+    SITE_NAME = MeasurementDescription(
+        "site_name", "site_name", "Name of campaign site",
+        ['location'], True
+    )
+    SITE_ID = MeasurementDescription(
+        "site_id", "site_id", "ID within campaign site",
+        ['site'], True
+    )
+    PIT_ID = MeasurementDescription(
+        "pit_id", "pit_id", "ID of snow pit",
+        ['pitid'], True
+    )
+    EQUIVALENT_DIAMETER = MeasurementDescription(
+        'equivalent_diameter', 'equivalent_diameter', "",
+        ['deq']
+    )
+    OBSERVERS = MeasurementDescription(
+        'observers', 'observers', "Observer(s) of the measurement",
+        ['operator', 'surveyors', 'observer']
+    )
+    TOTAL_DEPTH = MeasurementDescription(
+        'total_depth', 'total_depth', "Total depth of measurement",
+        ['total_snow_depth']
+    )
+    INSTRUMENT = MeasurementDescription(
+        'instrument', 'instrument', "Instrument of measurement",
+        ['smp_serial_number', 'measurement_tool']
+    )
+    LATITUDE = MeasurementDescription(
+        'latitude', 'latitude', "Latitude",
+        ['lat', 'latitude']
+    )
+    LONGITUDE = MeasurementDescription(
+        'longitude', 'longitude', "Longitude",
+        ['long', 'lon', 'longitude']
+    )
+    EASTING = MeasurementDescription(
+        'easting', 'easting', "UTM Easting",
+        ['easting']
+    )
+    NORTHING = MeasurementDescription(
+        'northing', 'northing', "UTM Northing",
+        ['northing']
+    )
+    TWO_WAY_TRAVEL = MeasurementDescription(
+        'two_way_travel', 'two_way_travel', "Two way travel",
+        ['twt', 'twt_ns']
+    )
+    UTM_ZONE = MeasurementDescription(
+        'utm_zone', 'utm_zone', "UTM Zone",
+        ['utmzone', 'utm_zone']
+    )
+    FLAGS = MeasurementDescription(
+        'flags', 'flags', "Measurements flags",
+        ['flag']
+    )
+    DATE = MeasurementDescription(
+        'date', 'date', "Measurement Date (only date column)",
+        ['date_dd_mmm_yy']
+    )
+    TIME = MeasurementDescription(
+        'time', 'time', "Measurement time",
+        ['time_gmt']
+    )
+    ELEVATION = MeasurementDescription(
+        'elevation', 'elevation', "Elevation",
+        ['elev_m']
+    )
+    DATETIME = MeasurementDescription(
+        'datetime', "datetime", "Combined date and time",
+        ["Date/Local Standard Time", "date/local_standard_time"], True
     )
