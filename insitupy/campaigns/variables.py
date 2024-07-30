@@ -261,7 +261,8 @@ class SnowExProfileVariables(ProfileVariables):
         True
     )
     RH_10FT = MeasurementDescription(
-        "relative_humidity_10ft", "Relative humidity measured at 10 ft tower level",
+        "relative_humidity_10ft",
+        "Relative humidity measured at 10 ft tower level",
         ['rh_10ft']
     )
     BP = MeasurementDescription(
@@ -269,31 +270,38 @@ class SnowExProfileVariables(ProfileVariables):
         ['bp_kpa_avg']
     )
     AIR_TEMP_10FT = MeasurementDescription(
-        'air_temperature_10ft', "Air temperature measured at 10 ft tower level",
+        'air_temperature_10ft',
+        "Air temperature measured at 10 ft tower level",
         ['airtc_10ft_avg']
     )
     WIND_SPEED_10FT = MeasurementDescription(
-        'wind_speed_10ft', "Vector mean wind speed measured at 10 ft tower level",
+        'wind_speed_10ft',
+        "Vector mean wind speed measured at 10 ft tower level",
         ['wsms_10ft_avg']
     )
     WIND_DIR_10ft = MeasurementDescription(
-        'wind_direction_10ft', "Vector mean wind direction measured at 10 ft tower level",
+        'wind_direction_10ft',
+        "Vector mean wind direction measured at 10 ft tower level",
         ['winddir_10ft_d1_wvt']
     )
     SW_IN = MeasurementDescription(
-        'incoming_shortwave', "Shortwave radiation measured with upward-facing sensor",
+        'incoming_shortwave',
+        "Shortwave radiation measured with upward-facing sensor",
         ['sup_avg']
     )
     SW_OUT = MeasurementDescription(
-        'outgoing_shortwave', "Shortwave radiation measured with downward-facing sensor",
+        'outgoing_shortwave',
+        "Shortwave radiation measured with downward-facing sensor",
         ['sdn_avg']
     )
     LW_IN = MeasurementDescription(
-        'incoming_longwave', "Longwave radiation measured with upward-facing sensor",
+        'incoming_longwave',
+        "Longwave radiation measured with upward-facing sensor",
         ['lupco_avg']
     )
     LW_OUT = MeasurementDescription(
-        'outgoing_longwave', "Longwave radiation measured with downward-facing sensor",
+        'outgoing_longwave',
+        "Longwave radiation measured with downward-facing sensor",
         ['ldnco_avg']
     )
     SM_20CM = MeasurementDescription(
@@ -301,7 +309,7 @@ class SnowExProfileVariables(ProfileVariables):
         ['sm_20cm_avg']
     )
     ST_20CM = MeasurementDescription(
-        'soil_temperature_20cm', "Soil temperature measured at 10 cm below the soil",
+        'soil_temperature_20cm',
+        "Soil temperature measured at 10 cm below the soil",
         ['tc_20cm_avg']
     )
-
