@@ -36,13 +36,29 @@ class MetaDataParser:
     LON_NAMES = ["lon", "lon", "longitude"]
     UTM_EPSG_PREFIX = "269"
     NORTHERN_HEMISPHERE = True
+    VARIABLES_CLASS = ProfileVariables
 
-    def __init__(self, fname, timezone, header_sep=","):
+    def __init__(
+        self, fname, timezone, header_sep=",", allow_split_lines=False
+    ):
+        """
+        Args:
+            fname: path to file
+            timezone: string timezone
+            header_sep: expected header separator
+            allow_split_lines: Allow for split header lines that
+                don't start with the expected header character. In this case
+                the number of header lines will be the max line starting with
+                the expected character, and lines that don't start with
+                that character will be combined with the previous line
+        """
         self._fname = fname
         self._input_timezone = timezone
         self._header_sep = header_sep
         self._rough_obj = {}
         self._lat_lon_easting_northing = None
+
+        self._allow_split_header_lines = allow_split_lines
 
     @property
     def rough_obj(self):
@@ -300,7 +316,7 @@ class MetaDataParser:
         Returns:
             (metadata object, column list, position of header in file)
         """
-        meta_lines, columns, header_position = self._read(self._fname)
+        meta_lines, columns, header_position = self.find_header_info(self._fname)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = ProfileMetaData(
@@ -360,12 +376,12 @@ class MetaDataParser:
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
         final_cols = []
         for c in standard_cols:
-            mapped_col, col_map = ProfileVariables.from_mapping(c)
+            mapped_col, col_map = self.VARIABLES_CLASS.from_mapping(c)
             final_cols.append(mapped_col)
 
         return final_cols
 
-    def _read(self, filename):
+    def find_header_info(self, filename=None):
         """
         Read in all site details file for a pit If the filename has the word
         site in it then we read everything in the file. Otherwise, we use this
@@ -382,6 +398,7 @@ class MetaDataParser:
                    **header_pos** - Index of the columns header for skiprows in
                                     read_csv
        """
+        filename = filename or self._fname
         filename = str(filename)
         with open(filename, encoding='latin') as fp:
             lines = fp.readlines()
@@ -392,10 +409,11 @@ class MetaDataParser:
             LOG.info('Parsing site description header...')
             columns = None
             header_pos = None
+            header_indicator = None
 
         # Find the column names and where it is in the file
         else:
-            header_pos = self._find_header_position(lines)
+            header_pos, header_indicator = self._find_header_position(lines)
             columns = self._parse_columns(lines[header_pos])
             LOG.debug(
                 f'Column Data found to be {len(columns)} columns based on'
@@ -404,11 +422,36 @@ class MetaDataParser:
             # Only parse what we know if the header
             lines = lines[0:header_pos]
 
+        final_lines = lines
+
         # Clean up the lines from line returns to grab header info
-        lines = [ln.strip() for ln in lines]
-        str_data = " ".join(lines).split('#')
+        final_lines = [ln.strip() for ln in final_lines]
+        # Join all data and split on header separator
+        # This handles combining split lines
+        str_data = " ".join(final_lines).split('#')
+        str_data = [ln.strip() for ln in str_data if ln]
 
         return str_data, columns, header_pos
+
+    def _iterative_header_pos_search(self, lines, n_columns, header_indicator):
+        # Use these to monitor if a larger column count is found
+        header_pos = 0
+        for i, l in enumerate(lines):
+            if i == 0:
+                previous = StringManager.get_alpha_ratio(lines[i])
+            else:
+                previous = StringManager.get_alpha_ratio(lines[i - 1])
+
+            if StringManager.line_is_header(
+                l, expected_columns=n_columns,
+                header_indicator=header_indicator,
+                previous_alpha_ratio=previous
+            ):
+                header_pos = i
+
+            if i > header_pos:
+                break
+        return header_pos
 
     def _find_header_position(self, lines):
         """
@@ -435,28 +478,29 @@ class MetaDataParser:
         # #2)
         n_columns = len(lines[-1].split(','))
 
-        # Use these to monitor if a larger column count is found
-        header_pos = 0
         if lines[0][0] == '#':
             header_indicator = '#'
         else:
             header_indicator = None
 
-        for i, l in enumerate(lines):
-            if i == 0:
-                previous = StringManager.get_alpha_ratio(lines[i])
+        if self._allow_split_header_lines:
+            if header_indicator is None:
+                raise RuntimeError(
+                    "Cannot allow split lines with no clear header indicator"
+                )
             else:
-                previous = StringManager.get_alpha_ratio(lines[i - 1])
+                # header pos is max lines with
+                # first character == header indicator
+                header_indices = [
+                    index for index, value in enumerate(lines)
+                    if value[0] == header_indicator
+                ]
+                header_pos = max(header_indices)
 
-            if StringManager.line_is_header(
-                l, expected_columns=n_columns,
-                header_indicator=header_indicator,
-                previous_alpha_ratio=previous
-            ):
-                header_pos = i
-
-            if i > header_pos:
-                break
+        else:
+            header_pos = self._iterative_header_pos_search(
+                lines, n_columns, header_indicator
+            )
 
         LOG.debug('Found end of header at line {}...'.format(header_pos))
-        return header_pos
+        return header_pos, header_indicator
