@@ -118,7 +118,7 @@ class ProfileVariables(ExtendableVariables):
         "depth", "top or center depth of measurement",
         [
             "depth", "top", "sample_top_height", "hs",
-            "depth_m", 'snowdepthfilter(m)'
+            "depth_m", 'snowdepthfilter(m)', 'snowdepthfilter'
         ], True
     )
     BOTTOM_DEPTH = MeasurementDescription(
