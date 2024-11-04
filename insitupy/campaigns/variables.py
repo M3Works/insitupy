@@ -112,6 +112,7 @@ class ExtendableVariables:
 
 
 class ProfileVariables(ExtendableVariables):
+    # TODO optional multisample list to check
 
     SWE = MeasurementDescription(
         "SWE", "Snow Water Equivalent",
