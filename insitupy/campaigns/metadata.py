@@ -36,7 +36,8 @@ class MetaDataParser:
     LON_NAMES = ["lon", "lon", "longitude"]
     UTM_EPSG_PREFIX = "269"
     NORTHERN_HEMISPHERE = True
-    VARIABLES_CLASS = ProfileVariables
+    PRIMARY_VARIABLES_CLASS = ProfileVariables
+    METADATA_VARIABLE_CLASS = ProfileVariables
 
     def __init__(
         self, fname, timezone, header_sep=",", allow_split_lines=False
@@ -203,6 +204,7 @@ class MetaDataParser:
         easting = None
         northing = None
         for k, v in self.rough_obj.items():
+            # TODO: migrate this logic to 'metadata_variables_class'
             if k in self.LAT_NAMES:
                 lat = float(v)
             elif k in self.LON_NAMES:
