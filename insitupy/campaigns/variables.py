@@ -20,6 +20,7 @@ class MeasurementDescription:
     remap: bool = False  # Auto remap to the column to the code
     # TODO: optional unit we get form 'parse_from' method
     # unit: str = None
+    cast_type = None   # make this float, int, etc
 
 
 class ExtendableVariables:
@@ -78,8 +79,7 @@ class ExtendableVariables:
     def __len__(self):
         return len(self.entries)
 
-
-class ProfileVariables(ExtendableVariables):
+    # TODO: value mapping for casting
     @classmethod
     def from_mapping(cls, input_name):
         """
@@ -110,6 +110,9 @@ class ProfileVariables(ExtendableVariables):
         )
         return result, column_mapping
 
+
+class ProfileVariables(ExtendableVariables):
+
     SWE = MeasurementDescription(
         "SWE", "Snow Water Equivalent",
         ["swe_mm", "swe"]
@@ -118,7 +121,8 @@ class ProfileVariables(ExtendableVariables):
         "depth", "top or center depth of measurement",
         [
             "depth", "top", "sample_top_height", "hs",
-            "depth_m", 'snowdepthfilter(m)', 'snowdepthfilter'
+            "depth_m", 'snowdepthfilter(m)', 'snowdepthfilter',
+            'height'
         ], True
     )
     BOTTOM_DEPTH = MeasurementDescription(
@@ -145,7 +149,9 @@ class ProfileVariables(ExtendableVariables):
     )
     PERMITTIVITY = MeasurementDescription(
         "permittivity", "Permittivity",
-        ["permittivity_a", "permittivity_b", "permittivity", 'dielectric_constant']
+        ["permittivity_a", "permittivity_b", "permittivity",
+         'dielectric_constant', 'dielectric_constant_a',
+         'dielectric_constant_b'], True
     )
     GRAIN_SIZE = MeasurementDescription(
         "grain_size", "Grain Size",
@@ -166,21 +172,21 @@ class ProfileVariables(ExtendableVariables):
 
 
 class SnowExProfileVariables(ProfileVariables):
-    COMMENTS = MeasurementDescription(
-        "comments", "Comments",
-        ["comments"]
+    # TODO: Some of these move to snowexdb
+    # TODO: unify with snowexdb
+    DATETIME = MeasurementDescription(
+        'datetime', "Combined date and time",
+        ["Date/Local Standard Time", "date/local_standard_time", "datetime",
+         "date&time"],
+        True
     )
-    PIT_COMMENTS = MeasurementDescription(
-        "pit_comments", "Pit Comments",
-        ["pit_comments"]
+    DATE = MeasurementDescription(
+        'date', "Measurement Date (only date column)",
+        ['date_dd_mmm_yy', 'date']
     )
-    COUNT = MeasurementDescription(
-        "count", "Count for surrounding perimeter depths",
-        ["count"]
-    )
-    PARAMETER_CODES = MeasurementDescription(
-        "parameter_codes", "Parameter Codes",
-        ["parameter_codes"]
+    TIME = MeasurementDescription(
+        'time', "Measurement time",
+        ['time_gmt', 'time']
     )
     TIME_BOUND_PIT = MeasurementDescription(
         "Time start/end",
@@ -203,10 +209,7 @@ class SnowExProfileVariables(ProfileVariables):
         'equivalent_diameter', "",
         ['deq']
     )
-    OBSERVERS = MeasurementDescription(
-        'observers', "Observer(s) of the measurement",
-        ['operator', 'surveyors', 'observer']
-    )
+
     TOTAL_DEPTH = MeasurementDescription(
         'total_depth', "Total depth of measurement",
         ['total_snow_depth']
@@ -223,93 +226,20 @@ class SnowExProfileVariables(ProfileVariables):
         'longitude', "Longitude",
         ['long', 'lon', 'longitude']
     )
-    EASTING = MeasurementDescription(
-        'easting', "UTM Easting",
-        ['easting']
-    )
     NORTHING = MeasurementDescription(
         'northing', "UTM Northing",
-        ['northing']
+        ['northing', 'utm_wgs84_northing'], True
     )
-    TWO_WAY_TRAVEL = MeasurementDescription(
-        'two_way_travel', "Two way travel",
-        ['twt', 'twt_ns']
+    EASTING = MeasurementDescription(
+        'easting', "UTM Easting",
+        ['easting', 'utm_wgs84_easting'], True
     )
     UTM_ZONE = MeasurementDescription(
         'utm_zone', "UTM Zone",
         ['utmzone', 'utm_zone']
     )
-    FLAGS = MeasurementDescription(
-        'flags', "Measurements flags",
-        ['flag']
-    )
-    DATE = MeasurementDescription(
-        'date', "Measurement Date (only date column)",
-        ['date_dd_mmm_yy']
-    )
-    TIME = MeasurementDescription(
-        'time', "Measurement time",
-        ['time_gmt']
-    )
     ELEVATION = MeasurementDescription(
         'elevation', "Elevation",
-        ['elev_m']
+        ['elev_m', 'elevation', 'elevationwgs84'], True
     )
-    DATETIME = MeasurementDescription(
-        'datetime', "Combined date and time",
-        ["Date/Local Standard Time", "date/local_standard_time", "datetime"],
-        True
-    )
-    RH_10FT = MeasurementDescription(
-        "relative_humidity_10ft",
-        "Relative humidity measured at 10 ft tower level",
-        ['rh_10ft']
-    )
-    BP = MeasurementDescription(
-        'barometric_pressure', "Barometric pressure",
-        ['bp_kpa_avg']
-    )
-    AIR_TEMP_10FT = MeasurementDescription(
-        'air_temperature_10ft',
-        "Air temperature measured at 10 ft tower level",
-        ['airtc_10ft_avg']
-    )
-    WIND_SPEED_10FT = MeasurementDescription(
-        'wind_speed_10ft',
-        "Vector mean wind speed measured at 10 ft tower level",
-        ['wsms_10ft_avg']
-    )
-    WIND_DIR_10ft = MeasurementDescription(
-        'wind_direction_10ft',
-        "Vector mean wind direction measured at 10 ft tower level",
-        ['winddir_10ft_d1_wvt']
-    )
-    SW_IN = MeasurementDescription(
-        'incoming_shortwave',
-        "Shortwave radiation measured with upward-facing sensor",
-        ['sup_avg']
-    )
-    SW_OUT = MeasurementDescription(
-        'outgoing_shortwave',
-        "Shortwave radiation measured with downward-facing sensor",
-        ['sdn_avg']
-    )
-    LW_IN = MeasurementDescription(
-        'incoming_longwave',
-        "Longwave radiation measured with upward-facing sensor",
-        ['lupco_avg']
-    )
-    LW_OUT = MeasurementDescription(
-        'outgoing_longwave',
-        "Longwave radiation measured with downward-facing sensor",
-        ['ldnco_avg']
-    )
-    SM_20CM = MeasurementDescription(
-        'soil_moisture_20cm', "Soil moisture measured at 10 cm below the soil",
-        ['sm_20cm_avg']
-    )
-    ST_20CM = MeasurementDescription(
-        'soil_temperature_20cm',
-        "Soil temperature measured at 10 cm below the soil",
-        ['tc_20cm_avg']
-    )
+
