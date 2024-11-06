@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
+from insitupy.profiles.base import ProfileData
 from insitupy.variables import (
     BasePrimaryVariables, BaseMetadataVariables, MeasurementDescription,
     ExtendableVariables
@@ -78,10 +79,11 @@ class ProfileDataCollection:
     """
     This could be a collection of pits, profiles, etc
     """
+    META_PARSER = MetaDataParser
+    PROFILE_DATA_CLASS = ProfileData
 
-    def __init__(self, df):
-        self._df = df
-        pass
+    def __init__(self, profiles: List[ProfileData]):
+        self._profiles = profiles
 
     @property
     def SWE(self):
@@ -125,7 +127,38 @@ class ProfileDataCollection:
         pass
 
     @classmethod
-    def from_files(cls):
+    def _read(cls, fname, columns, header_pos, metadata):
+        # retrun list of ProfileData
+        # TODO: read in the df
+        # TODO: split into invididual datasets
+        # TODO: return a list of profile data from those datasets
+        # Iterate columns
+        # TODO: rename to standard names for multi sample measurements
+        # TODO: share reading logic with ProfileData
+        # cls.PROFILE_DATA_CLASS.some_shared_reading_logic
+        result = [
+            ProfileData(
+                df, metadata, variable,  # variable is a MeasurementDescription
+                original_file=fname
+            )
+        ]
+        return None
+
+    @classmethod
+    def from_csv(cls, fname):
+        # TODO: timezone here (mapped from site?)
         # parse mlutiple files and create an iterable of ProfileData
-        pass
+        # TODO: if this is multisample or multi variables,
+        #   we should split into n dataframes contained in n objects
+        #   (n being sample or variables). This means that we could return
+        #   multiple SnowExProfileData instantiated classes for on read
+        meta_parser = cls.META_PARSER(fname, "US/Mountain")
+        # Parse the metadata and column info
+        metadata, columns, header_pos = meta_parser.parse()
+        # read in the actual data
+        profiles = cls._read(fname, columns, header_pos, metadata)
+
+        # TODO: return a list of classes always
+
+        return cls(profiles, metadata)
 

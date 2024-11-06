@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 from pathlib import Path
 
@@ -7,16 +9,39 @@ from insitupy.variables import MeasurementDescription
 from insitupy.profiles.base import ProfileData, standardize_depth
 
 
+LOG = logging.getLogger(__name__)
+
+
 class SnowExMetadataParser(MetaDataParser):
     METADATA_VARIABLE_CLASS = SnowExMetadataVariables
     PRIMARY_VARIABLES_CLASS = SnowExPrimaryVariables
+
+
+# class SingleProfile():
+#     def __init__(self, not sure):
+#
+#     @classmethod
+#     def from_file(cls, fname, varname=None):
+#         # get columns and headers
+#         header, columns = find_header_info()
+#
+#         if varname is None:
+#             primary = columns[0]
+#         else:
+#             for c in columns:
+#                 if c == varname:
+#                     prime = c
+#                     break
+#         return cls(primary, ....)
 
 
 class SnowExProfileData(ProfileData):
     META_PARSER = SnowExMetadataParser
 
     @classmethod
-    def from_file(cls, fname, variable: MeasurementDescription):
+    def from_csv(
+        cls, fname, variable: MeasurementDescription
+    ):
         # TODO: timezone here (mapped from site?)
         meta_parser = cls.META_PARSER(fname, "US/Mountain")
         # Parse the metadata and column info
@@ -25,6 +50,12 @@ class SnowExProfileData(ProfileData):
         data = cls._read(fname, columns, header_pos)
 
         return cls(data, metadata, variable)
+
+    @classmethod
+    def from_dataframe(cls, df, metadata):
+        # Instantiate from a read in file
+        pass
+
 
     @staticmethod
     def _read(profile_filename, columns, header_position):
@@ -80,4 +111,8 @@ class SnowExProfileData(ProfileData):
                 f'File contains a profile with'
                 f' with {len(df)} layers across {delta:0.2f} cm'
             )
+
+        # TODO: if this is multisample or multivariable, we are just returning
+        #   the requested variable OR the first variable
+
         return df

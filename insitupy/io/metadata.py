@@ -366,7 +366,7 @@ class MetaDataParser:
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
         final_cols = []
         for c in standard_cols:
-            mapped_col, col_map = self.VARIABLES_CLASS.from_mapping(c)
+            mapped_col, col_map = self.PRIMARY_VARIABLES_CLASS.from_mapping(c)
             final_cols.append(mapped_col)
 
         return final_cols
@@ -404,6 +404,7 @@ class MetaDataParser:
         # Find the column names and where it is in the file
         else:
             header_pos, header_indicator = self._find_header_position(lines)
+            # TODO: identify columns, map columns,
             columns = self._parse_columns(lines[header_pos])
             LOG.debug(
                 f'Column Data found to be {len(columns)} columns based on'

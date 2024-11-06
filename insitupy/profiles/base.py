@@ -21,6 +21,7 @@ class ProfileData:
 
     def __init__(
         self, input_df, metadata: ProfileMetaData, variable: MeasurementDescription,
+        original_file=None
     ):
         """
         Take df of layered data (SMP, pit, etc)
@@ -30,6 +31,7 @@ class ProfileData:
                 Should include sample or sample_a, sample_b, etc
 
         """
+        self._original_file = None
         self._depth_layer = self.META_PARSER.PRIMARY_VARIABLES_CLASS.VARIABLES.DEPTH
         self._lower_depth_layer = self.META_PARSER.PRIMARY_VARIABLES_CLASS.BOTTOM_DEPTH
         self._metadata = metadata
@@ -180,8 +182,9 @@ class ProfileData:
         return df.loc[:, columns_of_interest]
 
     @classmethod
-    def from_file(self, fname, variable: ExtendableVariables):
+    def from_csv(self, fname, variable: ExtendableVariables):
         raise NotImplementedError("Not implemented")
+
 
 
 def standardize_depth(depths, desired_format='snow_height', is_smp=False):
