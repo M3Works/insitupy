@@ -17,24 +17,6 @@ class SnowExMetadataParser(MetaDataParser):
     PRIMARY_VARIABLES_CLASS = SnowExPrimaryVariables
 
 
-# class SingleProfile():
-#     def __init__(self, not sure):
-#
-#     @classmethod
-#     def from_file(cls, fname, varname=None):
-#         # get columns and headers
-#         header, columns = find_header_info()
-#
-#         if varname is None:
-#             primary = columns[0]
-#         else:
-#             for c in columns:
-#                 if c == varname:
-#                     prime = c
-#                     break
-#         return cls(primary, ....)
-
-
 class SnowExProfileData(ProfileData):
     META_PARSER = SnowExMetadataParser
 
@@ -45,30 +27,28 @@ class SnowExProfileData(ProfileData):
         # TODO: timezone here (mapped from site?)
         meta_parser = cls.META_PARSER(fname, "US/Mountain")
         # Parse the metadata and column info
-        metadata, columns, header_pos = meta_parser.parse()
+        metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
-        data = cls._read(fname, columns, header_pos)
+        data = cls.read_csv_dataframe(fname, columns, header_pos)
+        # TODO: if this is multisample or multivariable, we are just returning
+        #   the requested variable OR the first variable
+        # TODO: filter to single variable dataframe based on variable
 
         return cls(data, metadata, variable)
 
-    @classmethod
-    def from_dataframe(cls, df, metadata):
-        # Instantiate from a read in file
-        pass
-
-
     @staticmethod
-    def _read(profile_filename, columns, header_position):
+    def read_csv_dataframe(profile_filename, columns, header_position):
         """
-        # TODO: better name mapping here
         Read in a profile file. Managing the number of lines to skip and
         adjusting column names
 
         Args:
-            profile_filename: Filename containing the a manually measured
+            profile_filename: Filename containing a manually measured
                              profile
+            columns: list of columns to use in dataframe
+            header_position: skiprows for pd.read_csv
         Returns:
-            df: pd.dataframe contain csv data with standardized column names
+            df: pd.dataframe contain csv data with desired column names
         """
         # header=0 because docs say to if using skip rows and columns
         df = pd.read_csv(
@@ -111,8 +91,5 @@ class SnowExProfileData(ProfileData):
                 f'File contains a profile with'
                 f' with {len(df)} layers across {delta:0.2f} cm'
             )
-
-        # TODO: if this is multisample or multivariable, we are just returning
-        #   the requested variable OR the first variable
 
         return df

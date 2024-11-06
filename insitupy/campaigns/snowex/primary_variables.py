@@ -12,10 +12,10 @@ class SnowExPrimaryVariables(BasePrimaryVariables):
 
     EQUIVALENT_DIAMETER = MeasurementDescription(
         'equivalent_diameter', "",
-        ['deq']
+        ['deq'], auto_remap=True
     )
 
     INSTRUMENT = MeasurementDescription(
         'instrument', "Instrument of measurement",
-        ['smp_serial_number', 'measurement_tool', 'instrument']
+        ['smp_serial_number', 'measurement_tool', 'instrument'], auto_remap=True
     )

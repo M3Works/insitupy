@@ -6,7 +6,7 @@ import pytz
 import utm
 
 from .strings import StringManager
-from .variables import ProfileVariables
+from insitupy.variables import BaseMetadataVariables, BasePrimaryVariables
 from ..profiles.metadata import ProfileMetaData
 
 LOG = logging.getLogger(__name__)
@@ -24,8 +24,8 @@ class MetaDataParser:
     LON_NAMES = ["lon", "lon", "longitude"]
     UTM_EPSG_PREFIX = "269"
     NORTHERN_HEMISPHERE = True
-    PRIMARY_VARIABLES_CLASS = ProfileVariables
-    METADATA_VARIABLE_CLASS = ProfileVariables
+    PRIMARY_VARIABLES_CLASS = BasePrimaryVariables
+    METADATA_VARIABLE_CLASS = BaseMetadataVariables
 
     def __init__(
         self, fname, timezone, header_sep=",", allow_split_lines=False
@@ -306,7 +306,8 @@ class MetaDataParser:
         Returns:
             (metadata object, column list, position of header in file)
         """
-        meta_lines, columns, header_position = self.find_header_info(self._fname)
+        (meta_lines, columns,
+         columns_map, header_position) = self.find_header_info(self._fname)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = ProfileMetaData(
@@ -320,7 +321,7 @@ class MetaDataParser:
             flags=self.parse_flags(),
         )
 
-        return metadata, columns, header_position
+        return metadata, columns, columns_map, header_position
 
     def _parse_header(self, lines):
         # Key value pairs are separate by some separator provided.
@@ -365,11 +366,13 @@ class MetaDataParser:
         raw_cols = str_line.strip('#').split(',')
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
         final_cols = []
+        final_col_map = {}
         for c in standard_cols:
             mapped_col, col_map = self.PRIMARY_VARIABLES_CLASS.from_mapping(c)
             final_cols.append(mapped_col)
+            final_col_map = {**final_col_map, **col_map}
 
-        return final_cols
+        return final_cols, final_col_map
 
     def find_header_info(self, filename=None):
         """
@@ -405,7 +408,7 @@ class MetaDataParser:
         else:
             header_pos, header_indicator = self._find_header_position(lines)
             # TODO: identify columns, map columns,
-            columns = self._parse_columns(lines[header_pos])
+            columns, columns_map = self._parse_columns(lines[header_pos])
             LOG.debug(
                 f'Column Data found to be {len(columns)} columns based on'
                 f' Line {header_pos}'
@@ -422,7 +425,7 @@ class MetaDataParser:
         str_data = " ".join(final_lines).split('#')
         str_data = [ln.strip() for ln in str_data if ln]
 
-        return str_data, columns, header_pos
+        return str_data, columns, columns_map, header_pos
 
     def _iterative_header_pos_search(self, lines, n_columns, header_indicator):
         # Use these to monitor if a larger column count is found

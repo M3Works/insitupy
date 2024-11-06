@@ -17,7 +17,8 @@ class MeasurementDescription:
     code: str = "-1"  # code used within the applicable API
     description: str = None  # description of the sensor
     map_from: List = None  # map to this variable from a list of options
-    remap: bool = False  # Auto remap to the column to the code
+    auto_remap: bool = False  # Auto remap to the column to the code
+    match_on_code: bool = True  # Match on the code too
     # TODO: optional unit we get form 'parse_from' method
     # unit: str = None
     cast_type = None   # make this float, int, etc
@@ -91,16 +92,22 @@ class ExtendableVariables:
             column name
             column mapping (map of name to MeasurementDescription)
         """
+        lower_name = input_name.lower()
         result = None
         # Map column name to variable type
         column_mapping = {}
         for entry in cls():
-            if entry.map_from and input_name.lower() in entry.map_from:
+            # Check if we match directly on the code
+            code_match = entry.match_on_code and lower_name == entry.code
+            # Check if we match from the list of possible matches
+            map_match = entry.map_from and lower_name in entry.map_from
+            if code_match or map_match:
                 # Remap to code
-                if entry.remap:
+                if entry.auto_remap:
                     result = entry.code
                 else:
                     result = input_name
+                # store a map of the column name to the variable description
                 column_mapping[result] = entry
                 break
         if result is None:

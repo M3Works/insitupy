@@ -77,13 +77,14 @@ LOG = logging.getLogger(__name__)
 
 class ProfileDataCollection:
     """
-    This could be a collection of pits, profiles, etc
+    This could be a collection of profiles
     """
     META_PARSER = MetaDataParser
     PROFILE_DATA_CLASS = ProfileData
 
-    def __init__(self, profiles: List[ProfileData]):
+    def __init__(self, profiles: List[ProfileData], metadata: ProfileMetaData):
         self._profiles = profiles
+        self._metadata = metadata
 
     @property
     def SWE(self):
@@ -111,38 +112,59 @@ class ProfileDataCollection:
     #     pass
 
     @property
-    def metadata(self):
-        # might be a map of date to location
-        pass
+    def metadata(self) -> ProfileMetaData:
+        return self._metadata
+
+    @property
+    def profiles(self) -> List[ProfileData]:
+        return self._profiles
 
     @classmethod
-    def points_from_geometry(
-        cls,
-        geometry: gpd.GeoDataFrame,
-        variables: List[MeasurementDescription],
-        snow_courses=False,
-        within_geometry=True,
-        buffer=0.0
-    ):
-        pass
+    def _read_csv(
+        cls, fname, columns, column_mapping, header_pos,
+        metadata: ProfileMetaData
+    ) -> List[ProfileData]:
+        """
+        Args:
+            fname: path to csv
+            columns: columns for dataframe
+            column_mapping: mapping of column name to variable description
+            header_pos: skiprows for pd.read_csv
+            metadata: metadata for each object
 
-    @classmethod
-    def _read(cls, fname, columns, header_pos, metadata):
-        # retrun list of ProfileData
-        # TODO: read in the df
-        # TODO: split into invididual datasets
-        # TODO: return a list of profile data from those datasets
-        # Iterate columns
-        # TODO: rename to standard names for multi sample measurements
-        # TODO: share reading logic with ProfileData
-        # cls.PROFILE_DATA_CLASS.some_shared_reading_logic
-        result = [
-            ProfileData(
-                df, metadata, variable,  # variable is a MeasurementDescription
-                original_file=fname
-            )
+        Returns:
+            a list of ProfileData objects
+
+        """
+        result = []
+        df = cls.PROFILE_DATA_CLASS.read_csv_dataframe(
+            fname, columns, header_pos
+        )
+        # TODO: do we need to add comments in here for shared columns
+        depth_columns = cls.PROFILE_DATA_CLASS.depth_columns()
+        shared_columns = [
+            c for c, v in column_mapping.items() if v in depth_columns
         ]
-        return None
+        variable_columns = [
+            c for c in column_mapping.keys() if c not in shared_columns
+        ]
+
+        # Create an object for each measurement
+        for column in variable_columns:
+            target_df = df[:, shared_columns + [column]]
+            # We did not auto remap, so do it now
+            if not column_mapping[column].auto_remap:
+                target_df.rename(
+                    columns={column: 'new_column_name1'},
+                    inplace=True
+                )
+            result.append(ProfileData(
+                target_df, metadata,
+                column_mapping[column],  # variable is a MeasurementDescription
+                original_file=fname
+            ))
+
+        return result
 
     @classmethod
     def from_csv(cls, fname):
@@ -154,11 +176,9 @@ class ProfileDataCollection:
         #   multiple SnowExProfileData instantiated classes for on read
         meta_parser = cls.META_PARSER(fname, "US/Mountain")
         # Parse the metadata and column info
-        metadata, columns, header_pos = meta_parser.parse()
+        metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
-        profiles = cls._read(fname, columns, header_pos, metadata)
-
-        # TODO: return a list of classes always
+        profiles = cls._read_csv(fname, columns, header_pos, metadata)
 
         return cls(profiles, metadata)
 

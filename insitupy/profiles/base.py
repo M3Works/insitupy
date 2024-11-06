@@ -31,23 +31,21 @@ class ProfileData:
                 Should include sample or sample_a, sample_b, etc
 
         """
-        self._original_file = None
-        self._depth_layer = self.META_PARSER.PRIMARY_VARIABLES_CLASS.VARIABLES.DEPTH
-        self._lower_depth_layer = self.META_PARSER.PRIMARY_VARIABLES_CLASS.BOTTOM_DEPTH
+        self._original_file = original_file
+        self._depth_layer = self.depth_columns()[0]
+        self._lower_depth_layer = self.depth_columns()[1]
         self._metadata = metadata
-        # TODO: auto parse variable if not given
         self.variable: MeasurementDescription = variable
         # mapping of column name to measurement type
         self._column_mappings = {}
         # List of measurements to keep
-        self._measurements_to_keep = [
-            self._depth_layer, self._lower_depth_layer, self.variable
-        ]
+        self._measurements_to_keep = self.depth_columns() + [self.variable]
 
         self._id = metadata.id
         self._dt = metadata.date_time
 
         # This will populate the column mapping
+        # and filter to the desired measurement column
         self._df = self._format_df(input_df)
 
         columns = self._df.columns.values
@@ -69,14 +67,25 @@ class ProfileData:
             c for c in columns if self._column_mappings.get(c) == self.variable
         ]
         if len(self._sample_columns) == 0:
-            raise ValueError(f"No sample columns in {columns}")
+            raise ValueError(
+                f"No sample columns in {columns}. This is likely because"
+                f" variable {variable} is not in columns {input_df.columns}"
+            )
+        elif len(self._sample_columns) > 1:
+            LOG.warning("Only one sample column allowed, keeping the first match")
+            self._sample_columns = [self._sample_columns[0]]
 
         # describe the data a bit
         self._has_layers = self._lower_depth_layer.code in columns
-        # More than 1 sample of the variable (sample_1, sample_2)...
-        self._multi_sample = len(self._sample_columns) > 1
         # Extend the df info
-        self._extend_df()
+        self._add_thickness_to_df()
+
+    @classmethod
+    def depth_columns(cls):
+        return [
+            cls.META_PARSER.PRIMARY_VARIABLES_CLASS.DEPTH,
+            cls.META_PARSER.PRIMARY_VARIABLES_CLASS.BOTTOM_DEPTH
+        ]
 
     def _format_df(self, input_df):
         """
@@ -112,7 +121,7 @@ class ProfileData:
 
         return df
 
-    def _extend_df(self):
+    def _add_thickness_to_df(self):
         # set the thickness of the layer
         if self._has_layers:
             self._df[self.META_PARSER.PRIMARY_VARIABLES_CLASS.LAYER_THICKNESS.code] = (
@@ -180,6 +189,22 @@ class ProfileData:
         df[self.variable.code] = profile_average
         columns_of_interest = [*self._non_measure_columns, self.variable.code]
         return df.loc[:, columns_of_interest]
+
+    @staticmethod
+    def read_csv_dataframe(profile_filename, columns, header_position):
+        """
+        Read in a profile file. Managing the number of lines to skip and
+        adjusting column names
+
+        Args:
+            profile_filename: Filename containing a manually measured
+                             profile
+            columns: list of columns to use in dataframe
+            header_position: skiprows for pd.read_csv
+        Returns:
+            df: pd.dataframe contain csv data with desired column names
+        """
+        raise NotImplementedError("Not implemented")
 
     @classmethod
     def from_csv(self, fname, variable: ExtendableVariables):

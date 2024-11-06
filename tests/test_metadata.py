@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from insitupy.campaigns.metadata import MetaDataParser
+from insitupy.io.metadata import MetaDataParser
 
 
 @pytest.mark.parametrize(
