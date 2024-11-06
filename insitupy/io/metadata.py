@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import timedelta
 
 import logging
@@ -8,20 +7,9 @@ import utm
 
 from .strings import StringManager
 from .variables import ProfileVariables
+from ..profiles.metadata import ProfileMetaData
 
 LOG = logging.getLogger(__name__)
-
-
-@dataclass()
-class ProfileMetaData:
-    id: str
-    date_time: pd.Timestamp
-    latitude: float
-    longitude: float
-    utm_epsg: str = None  # the EPSG for the utm zone
-    site_id: str = None
-    site_name: str = None
-    flags: str = None
 
 
 class MetaDataParser:
