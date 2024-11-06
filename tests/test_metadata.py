@@ -23,8 +23,8 @@ class TestSnowexPitMetadata:
         obj = MetaDataParser(
             data_path.joinpath(fname), "US/Mountain"
         )
-        metadata, columns, header_pos = obj.parse()
-        return metadata, columns, header_pos
+        metadata, columns, column_mapping, header_pos = obj.parse()
+        return metadata, columns, column_mapping, header_pos
 
     @pytest.fixture
     def metadata(self, metadata_info):
@@ -36,7 +36,7 @@ class TestSnowexPitMetadata:
 
     @pytest.fixture
     def header_pos(self, metadata_info):
-        return metadata_info[2]
+        return metadata_info[3]
 
     # fname needs to be in test since it is a class
     # level parameterization
@@ -76,10 +76,10 @@ class TestSnowexPitMetadata:
         ("SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
          ['depth', 'bottom_depth', 'density_a', 'density_b', 'density_c']),
         ("SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-         ['depth', 'bottom_depth', 'avg_density', 'permittivity_a',
+         ['depth', 'bottom_depth', 'density', 'permittivity_a',
           'permittivity_b', 'lwc_vol_a', 'lwc_vol_b']),
         ("SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv",
-         ['depth', 'temperature'])
+         ['depth', 'snow_temperature'])
     ]
 )
 def test_columns(fname, expected_cols, data_path):
@@ -89,5 +89,5 @@ def test_columns(fname, expected_cols, data_path):
     obj = MetaDataParser(
         data_path.joinpath(fname), "US/Mountain"
     )
-    metadata, columns, header_pos = obj.parse()
+    metadata, columns, column_mapping, header_pos = obj.parse()
     assert columns == expected_cols
