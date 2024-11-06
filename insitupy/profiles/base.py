@@ -90,6 +90,8 @@ class ProfileData:
     def _format_df(self, input_df):
         """
         Format the incoming df with the column headers and other info we want
+        This will filter to a single measurement as well as the expected
+        shared columns like depth
         """
 
         # Get rid of columns we don't want and populate column mapping

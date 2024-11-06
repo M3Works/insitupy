@@ -7,8 +7,6 @@ class SnowExPrimaryVariables(BasePrimaryVariables):
     Extend the primary variables to include more mappings
     for snowex
     """
-    # TODO: Some of these move to snowexdb
-    # TODO: unify with snowexdb
 
     EQUIVALENT_DIAMETER = MeasurementDescription(
         'equivalent_diameter', "",

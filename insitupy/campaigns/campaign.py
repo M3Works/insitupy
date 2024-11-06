@@ -2,42 +2,12 @@
 Point data from select manual measurement campaigns
 """
 import logging
-from pathlib import Path
-import geopandas as gpd
 from typing import List
-
-import numpy as np
-import pandas as pd
 
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
-from insitupy.variables import (
-    BasePrimaryVariables, BaseMetadataVariables, MeasurementDescription,
-    ExtendableVariables
-)
-from insitupy.campaigns.snowex import SnowExPrimaryVariables, SnowExMetadataVariables
+from insitupy.variables import MeasurementDescription
 
-"""
-
-# Start with this
-https://github.com/SnowEx/snowex_db/blob/main/scripts/upload/add_time_series_pits.py
-data from https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_TS_SP.001/2020.04.27/
-
-# TODO: What do we need here
-
-https://github.com/SnowEx/snowex_db/blob/main/scripts/upload/add_iop_pits.py
-https://github.com/SnowEx/snowex_db/blob/main/scripts/upload/add_sbb_depths.py
-https://github.com/SnowEx/snowex_db/blob/main/scripts/upload/add_snow_depths.py
-
-SMP
-    https://github.com/SnowEx/snowex_db/blob/main/scripts/upload/add_smp.py
-    https://github.com/SnowEx/snowex_db/blob/main/scripts/upload/resample_smp.py
-
-Maybe not
-    https://github.com/SnowEx/snowex_db/blob/main/scripts/upload/add_snow_poles.py
-
-
-"""
 
 SOURCES = [
     "https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_SSA.001/",
@@ -53,24 +23,6 @@ SOURCES = [
      "SNEX20_SD_TLI_clean.csv"),
 ]
 
-
-"""
-Start with pit density, temperature measurements
-
-Big pluses
-    * variable name mapping
-
-# TODO
-    * will need login info for NSIDC
-    * stratigraphy will be the most complicated
-
-# TODO Next
-    * Clean up the metadata file reading
-        * We don't need everything we're reading right now
-    * map to sample_a, sample_b when reading in file
-    * flush out density and swe calcs
-
-"""
 
 LOG = logging.getLogger(__name__)
 
@@ -104,12 +56,6 @@ class ProfileDataCollection:
 
     def get_profile(self, variable: MeasurementDescription):
         raise NotImplementedError()
-
-    # def get_pit_data(self, start_date, end_date, variables) -> List[PointData]:
-    #     """
-    #     Returns a geodataframe
-    #     """
-    #     pass
 
     @property
     def metadata(self) -> ProfileMetaData:
@@ -151,11 +97,12 @@ class ProfileDataCollection:
 
         # Create an object for each measurement
         for column in variable_columns:
-            target_df = df[:, shared_columns + [column]]
+            target_df = df.loc[:, shared_columns + [column]]
             # We did not auto remap, so do it now
             if not column_mapping[column].auto_remap:
+
                 target_df.rename(
-                    columns={column: 'new_column_name1'},
+                    columns={column: column_mapping[column].code},
                     inplace=True
                 )
             result.append(ProfileData(
@@ -170,15 +117,13 @@ class ProfileDataCollection:
     def from_csv(cls, fname):
         # TODO: timezone here (mapped from site?)
         # parse mlutiple files and create an iterable of ProfileData
-        # TODO: if this is multisample or multi variables,
-        #   we should split into n dataframes contained in n objects
-        #   (n being sample or variables). This means that we could return
-        #   multiple SnowExProfileData instantiated classes for on read
         meta_parser = cls.META_PARSER(fname, "US/Mountain")
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
-        profiles = cls._read_csv(fname, columns, header_pos, metadata)
+        profiles = cls._read_csv(
+            fname, columns, columns_map, header_pos, metadata
+        )
 
         return cls(profiles, metadata)
 

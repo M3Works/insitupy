@@ -80,7 +80,6 @@ class ExtendableVariables:
     def __len__(self):
         return len(self.entries)
 
-    # TODO: value mapping for casting
     @classmethod
     def from_mapping(cls, input_name):
         """

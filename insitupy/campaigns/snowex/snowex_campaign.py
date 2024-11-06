@@ -30,9 +30,6 @@ class SnowExProfileData(ProfileData):
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
         data = cls.read_csv_dataframe(fname, columns, header_pos)
-        # TODO: if this is multisample or multivariable, we are just returning
-        #   the requested variable OR the first variable
-        # TODO: filter to single variable dataframe based on variable
 
         return cls(data, metadata, variable)
 
