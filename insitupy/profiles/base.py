@@ -20,7 +20,8 @@ class ProfileData:
     META_PARSER = MetaDataParser
 
     def __init__(
-        self, input_df, metadata: ProfileMetaData, variable: MeasurementDescription,
+        self, input_df, metadata: ProfileMetaData,
+        variable: MeasurementDescription,
         original_file=None
     ):
         """
@@ -44,6 +45,7 @@ class ProfileData:
         self._id = metadata.id
         self._dt = metadata.date_time
 
+        self._sample_column = None
         # This will populate the column mapping
         # and filter to the desired measurement column
         self._df = self._format_df(input_df)
@@ -62,19 +64,6 @@ class ProfileData:
             c for c in _non_measure_columns if c in columns
         ]
 
-        # Columns related to the variable
-        self._sample_columns = [
-            c for c in columns if self._column_mappings.get(c) == self.variable
-        ]
-        if len(self._sample_columns) == 0:
-            raise ValueError(
-                f"No sample columns in {columns}. This is likely because"
-                f" variable {variable} is not in columns {input_df.columns}"
-            )
-        elif len(self._sample_columns) > 1:
-            LOG.warning("Only one sample column allowed, keeping the first match")
-            self._sample_columns = [self._sample_columns[0]]
-
         # describe the data a bit
         self._has_layers = self._lower_depth_layer.code in columns
         # Extend the df info
@@ -87,25 +76,63 @@ class ProfileData:
             cls.META_PARSER.PRIMARY_VARIABLES_CLASS.BOTTOM_DEPTH
         ]
 
+    def _set_column_mappings(self, input_df):
+        # Get rid of columns we don't want and populate column mapping
+        columns = input_df.columns.values
+        for c in columns:
+            # Find the variable associated with each column
+            # and store a map
+            cn, cm = self.META_PARSER.PRIMARY_VARIABLES_CLASS.from_mapping(c)
+            # join with existing mappings
+            self._column_mappings = {**cm, **self._column_mappings}
+
+    def _check_sample_columns(self, input_df):
+        columns = input_df.columns.values
+        _sample_columns = [
+            c for c in columns if self._column_mappings.get(c) == self.variable
+        ]
+        if len(_sample_columns) == 0:
+            raise ValueError(
+                f"No sample columns in {columns}. This is likely because"
+                f" variable {self.variable} is not in columns {input_df.columns}"
+            )
+        elif len(_sample_columns) > 1:
+            LOG.warning("Only one sample column allowed, keeping the first match")
+            _sample_columns = [_sample_columns[0]]
+        _sample_column = _sample_columns[0]
+        # Rename the variable column to the variable code
+        # This covers the scenario where we did not auto-remap the
+        # variable on original parsing of the column names because
+        # it was a multi-sample variable
+        # Columns related to the variable
+        sample_column_type = self._column_mappings[_sample_column]
+        if sample_column_type != self.variable:
+            raise ValueError(
+                f"{sample_column_type} and {self.variable} are not the same"
+            )
+        input_df.rename(
+            columns={_sample_column: sample_column_type.code},
+            inplace=True
+        )
+        self._sample_column = sample_column_type.code
+        return input_df
+
     def _format_df(self, input_df):
         """
         Format the incoming df with the column headers and other info we want
         This will filter to a single measurement as well as the expected
         shared columns like depth
         """
-
-        # Get rid of columns we don't want and populate column mapping
         columns = input_df.columns.values
-        for c in columns:
-            cn, cm = self.META_PARSER.PRIMARY_VARIABLES_CLASS.from_mapping(c)
-            # join with existing mappings
-            self._column_mappings = {**cm, **self._column_mappings}
+        self._set_column_mappings(input_df)
 
         columns_to_keep = [
             c for c in columns
             if self._column_mappings[c] in self._measurements_to_keep
         ]
         df = input_df.loc[:, columns_to_keep]
+        # Verify the sample column exists and rename to variable
+        df = self._check_sample_columns(df)
 
         n_entries = len(df)
         df["datetime"] = [self._dt] * n_entries
@@ -149,8 +176,8 @@ class ProfileData:
             raise RuntimeError("Cannot compute for no layers")
 
         # this should work for multi or not multi sample
-        profile_average = self._df.loc[:, self._sample_columns].mean(axis=1)
-        self._df["mean"] = profile_average
+        profile = self._df.loc[:, self._sample_column]
+        self._df["mean"] = profile
         # TODO: sum up with depth change
         # TODO: could we use the weighted mean * the total depth?
         # TODO: units
@@ -158,9 +185,8 @@ class ProfileData:
 
     @property
     def mean(self):
-        profile_average = self._df.loc[:, self._sample_columns].mean(
-            axis=1)
-        if pd.isna(profile_average).all():
+        profile = self._df.loc[:, self._sample_column]
+        if pd.isna(profile).all():
             return np.nan
         if self._has_layers:
             # height weighted mean for these layers
@@ -169,11 +195,11 @@ class ProfileData:
             # the total thickness of the snowpack
             thickness_total = thickness.sum()
             weighted_mean = (
-                profile_average * thickness / thickness_total
+                profile * thickness / thickness_total
             ).sum()
             value = weighted_mean
         else:
-            value = np.mean(profile_average)
+            value = np.mean(profile)
 
         return value
 
@@ -185,8 +211,7 @@ class ProfileData:
     def get_profile(self, snow_datum="ground"):
         # TODO: snow datum is ground or snow
         # get profile of values
-        profile_average = self._df.loc[:, self._sample_columns].mean(
-            axis=1)
+        profile_average = self._df.loc[:, self._sample_column]
         df = self._df.copy()
         df[self.variable.code] = profile_average
         columns_of_interest = [*self._non_measure_columns, self.variable.code]

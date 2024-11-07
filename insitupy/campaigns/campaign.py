@@ -98,13 +98,6 @@ class ProfileDataCollection:
         # Create an object for each measurement
         for column in variable_columns:
             target_df = df.loc[:, shared_columns + [column]]
-            # We did not auto remap, so do it now
-            if not column_mapping[column].auto_remap:
-
-                target_df.rename(
-                    columns={column: column_mapping[column].code},
-                    inplace=True
-                )
             result.append(ProfileData(
                 target_df, metadata,
                 column_mapping[column],  # variable is a MeasurementDescription

@@ -19,16 +19,22 @@ class DataCollectionExtended(ProfileDataCollection):
         ),
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-            [BasePrimaryVariables.LWC_A], np.nan
+            [
+                BasePrimaryVariables.DENSITY,
+                BasePrimaryVariables.PERMITTIVITY_A,
+                BasePrimaryVariables.PERMITTIVITY_B,
+                BasePrimaryVariables.LWC_A,
+                BasePrimaryVariables.LWC_B,
+            ], [395.03703703703707, np.nan, np.nan, np.nan, np.nan]
         ),
-        # (
-        #     "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-        #     BasePrimaryVariables.PERMITTIVITY_A, np.nan
-        # ),
-        # (
-        #     "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-        #     BasePrimaryVariables.DENSITY_A, 397.8888888
-        # ),
+        (
+            "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
+            [
+                BasePrimaryVariables.DENSITY_A, BasePrimaryVariables.DENSITY_B,
+                BasePrimaryVariables.DENSITY_C
+            ],
+            [397.8888888, 394.5555556, 137.1111111]
+        ),
     ]
 )
 class TestProfileDataCollection:
@@ -48,4 +54,6 @@ class TestProfileDataCollection:
         result_means = [
             p.mean for p in obj.profiles
         ]
-        assert result_means == expected_means
+        np.testing.assert_almost_equal(
+            np.array(result_means), np.array(expected_means)
+        )
