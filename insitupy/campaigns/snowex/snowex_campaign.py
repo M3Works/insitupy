@@ -88,5 +88,8 @@ class SnowExProfileData(ProfileData):
                 f'File contains a profile with'
                 f' with {len(df)} layers across {delta:0.2f} cm'
             )
+        if "flags" in df.columns:
+            # Max length of the flags column
+            df["flags"] = df["flags"].str.replace(" ", "")
 
         return df
