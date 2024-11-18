@@ -122,6 +122,10 @@ class ProfileData:
             )
 
     @property
+    def metadata(self):
+        return self._metadata
+
+    @property
     def latlon(self):
         # return location metadata
         return self._metadata.latitude, self._metadata.longitude
