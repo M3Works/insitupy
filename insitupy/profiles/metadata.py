@@ -16,3 +16,4 @@ class ProfileMetaData:
     site_id: str = None
     site_name: str = None
     flags: str = None
+    comments: str = None
