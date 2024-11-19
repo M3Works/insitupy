@@ -13,6 +13,7 @@ class ProfileMetaData:
     latitude: float
     longitude: float
     utm_epsg: str = None  # the EPSG for the utm zone
+    # TODO: change these to campaign, site, etc
     site_id: str = None
     site_name: str = None
     flags: str = None

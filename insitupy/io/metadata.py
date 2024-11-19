@@ -6,7 +6,7 @@ import pytz
 import utm
 
 from .strings import StringManager
-from insitupy.variables import BaseMetadataVariables, BasePrimaryVariables
+from ..variables import BaseMetadataVariables, BasePrimaryVariables
 from ..profiles.metadata import ProfileMetaData
 
 LOG = logging.getLogger(__name__)
@@ -136,6 +136,7 @@ class MetaDataParser:
         if in_timezone is not None:
             in_tz = pytz.timezone(in_timezone)
         # Otherwise assume incoming data is the same timezone
+        # TODO: how do we handle row based timezone
         else:
             raise ValueError("We did not recieve a valid in_timezone")
 
@@ -214,10 +215,20 @@ class MetaDataParser:
             # )
             pass
         elif easting and northing:
-            zone_number = self.parse_utm_epsg()[-2:]
-            lat, lon = utm.to_latlon(
-                easting, northing, int(zone_number),
-                northern=self.NORTHERN_HEMISPHERE)
+            zone_number = self.parse_utm_epsg()
+            if isinstance(zone_number, str):
+                raise RuntimeError(
+                    f"{zone_number} should be an integer: {self._fname}"
+                )
+            # Get the last two digits
+            zone_number = int(str(zone_number)[-2:])
+            try:
+                lat, lon = utm.to_latlon(
+                    float(easting), float(northing), int(zone_number),
+                    northern=self.NORTHERN_HEMISPHERE)
+            except Exception as e:
+                raise RuntimeError(f"Failed with {easting}, {northing}")
+
         else:
             raise ValueError(
                 f"Could not parse location from {self.rough_obj}"
@@ -230,7 +241,7 @@ class MetaDataParser:
     def parse_longitude(self) -> float:
         return self.lat_lon_easting_northing[1]
 
-    def parse_utm_epsg(self) -> str:
+    def parse_utm_epsg(self) -> int:
         info = self.rough_obj
         epsg = None
         if 'utm_zone' in info.keys():
@@ -239,6 +250,7 @@ class MetaDataParser:
             epsg = int(f"{self.UTM_EPSG_PREFIX}{utm_zone}")
         elif 'epsg' in info.keys():
             epsg = info["epsg"]
+        # TODO: row based utm?
         return epsg
 
     def parse_site_id(self) -> str:
