@@ -42,7 +42,7 @@ class ProfileData:
         # List of measurements to keep
         self._measurements_to_keep = self.depth_columns() + [self.variable]
 
-        self._id = metadata.id
+        self._id = metadata.site_name
         self._dt = metadata.date_time
 
         self._sample_column = None

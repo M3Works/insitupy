@@ -1,6 +1,8 @@
 from datetime import timedelta
 
 import logging
+from typing import List
+
 import pandas as pd
 import pytz
 import utm
@@ -18,7 +20,6 @@ class MetaDataParser:
     """
     OUT_TIMEZONE = "UTC"
     ID_NAMES = ["pitid", "pit_id"]
-    SITE_ID_NAMES = ["site"]
     SITE_NAME_NAMES = ["location"]
     LAT_NAMES = ["lat", "latitude"]
     LON_NAMES = ["lon", "lon", "longitude"]
@@ -253,14 +254,7 @@ class MetaDataParser:
         # TODO: row based utm?
         return epsg
 
-    def parse_site_id(self) -> str:
-        for k, v in self.rough_obj.items():
-            if k in self.SITE_ID_NAMES:
-                return v
-
-        raise RuntimeError(f"Failed to parse Site ID from {self.rough_obj}")
-
-    def parse_site_name(self) -> str:
+    def parse_campaign_name(self) -> str:
         for k, v in self.rough_obj.items():
             if k in self.SITE_NAME_NAMES:
                 return v
@@ -272,6 +266,17 @@ class MetaDataParser:
         for k, v in self.rough_obj.items():
             if k in ["flags"]:
                 result = v
+                break
+
+        return result
+
+    def parse_observers(self) -> List[str]:
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in ["observers"]:
+                entry = v
+                result = entry.split(", ")
+                result = [r.strip() for r in result]
                 break
 
         return result
@@ -323,14 +328,14 @@ class MetaDataParser:
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = ProfileMetaData(
-            id=self.parse_id(),
+            site_name=self.parse_id(),
             date_time=self.parse_date_time(),
             latitude=self.parse_latitude(),
             longitude=self.parse_longitude(),
-            utm_epsg=self.parse_utm_epsg(),
-            site_id=self.parse_site_id(),
-            site_name=self.parse_site_name(),
+            utm_epsg=str(self.parse_utm_epsg()),
+            campaign_name=self.parse_campaign_name(),
             flags=self.parse_flags(),
+            observers=self.parse_observers()
         )
 
         return metadata, columns, columns_map, header_position

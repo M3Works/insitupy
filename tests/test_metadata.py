@@ -41,7 +41,7 @@ class TestSnowexPitMetadata:
     # fname needs to be in test since it is a class
     # level parameterization
     def test_id(self, metadata, fname):
-        assert metadata.id == "COERAP_20200427_0845"
+        assert metadata.site_name == "COERAP_20200427_0845"
 
     def test_date_time(self, metadata, fname):
         # converted from mountain time
@@ -62,7 +62,7 @@ class TestSnowexPitMetadata:
         assert metadata.site_id == "Aspen"
 
     def test_site_name(self, metadata, fname):
-        assert metadata.site_name == "East River"
+        assert metadata.campaign_name == "East River"
 
     def test_flags(self, metadata, fname):
         assert metadata.flags is None

@@ -107,10 +107,10 @@ class ProfileDataCollection:
         return result
 
     @classmethod
-    def from_csv(cls, fname):
+    def from_csv(cls, fname, timezone="US/Mountain"):
         # TODO: timezone here (mapped from site?)
         # parse mlutiple files and create an iterable of ProfileData
-        meta_parser = cls.META_PARSER(fname, "US/Mountain")
+        meta_parser = cls.META_PARSER(fname, timezone)
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
