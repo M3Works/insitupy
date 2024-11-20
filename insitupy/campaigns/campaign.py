@@ -98,7 +98,7 @@ class ProfileDataCollection:
         # Create an object for each measurement
         for column in variable_columns:
             target_df = df.loc[:, shared_columns + [column]]
-            result.append(ProfileData(
+            result.append(cls.PROFILE_DATA_CLASS(
                 target_df, metadata,
                 column_mapping[column],  # variable is a MeasurementDescription
                 original_file=fname
