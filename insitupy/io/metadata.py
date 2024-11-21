@@ -420,6 +420,7 @@ class MetaDataParser:
             columns = None
             header_pos = None
             header_indicator = None
+            columns_map = {}
 
         # Find the column names and where it is in the file
         else:

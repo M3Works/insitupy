@@ -20,7 +20,7 @@ class ProfileData:
     META_PARSER = MetaDataParser
 
     def __init__(
-        self, input_df, metadata: ProfileMetaData,
+        self, input_df: pd.DataFrame, metadata: ProfileMetaData,
         variable: MeasurementDescription,
         original_file=None
     ):
@@ -48,10 +48,14 @@ class ProfileData:
         self._sample_column = None
         # This will populate the column mapping
         # and filter to the desired measurement column
-        self._df = self._format_df(input_df)
+        if input_df.empty:
+            LOG.warning("DF is empty")
+            self._df = input_df
+        else:
+            self._df = self._format_df(input_df)
 
         columns = self._df.columns.values
-        if self._depth_layer.code not in columns:
+        if columns and self._depth_layer.code not in columns:
             raise ValueError(f"Expected {self._depth_layer} in columns")
 
         # List of columns that are not the desired variable

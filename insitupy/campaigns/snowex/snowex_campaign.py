@@ -29,7 +29,12 @@ class SnowExProfileData(ProfileData):
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
-        data = cls.read_csv_dataframe(fname, columns, header_pos)
+        if columns is None and not columns_map:
+            # Use an empty dataframe if the file is empty
+            LOG.warning(f"File {fname} is empty of rows")
+            data = pd.DataFrame()
+        else:
+            data = cls.read_csv_dataframe(fname, columns, header_pos)
 
         return cls(data, metadata, variable)
 

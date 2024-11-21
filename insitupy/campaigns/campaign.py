@@ -4,6 +4,7 @@ Point data from select manual measurement campaigns
 import logging
 from typing import List
 
+import pandas as pd
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
 from insitupy.variables import MeasurementDescription
@@ -83,9 +84,13 @@ class ProfileDataCollection:
 
         """
         result = []
-        df = cls.PROFILE_DATA_CLASS.read_csv_dataframe(
-            fname, columns, header_pos
-        )
+        if columns is None and header_pos is None:
+            LOG.warning(f"File {fname} is empty of rows")
+            df = pd.DataFrame()
+        else:
+            df = cls.PROFILE_DATA_CLASS.read_csv_dataframe(
+                fname, columns, header_pos
+            )
         # add comments in here for shared columns
         shared_column_options = cls.PROFILE_DATA_CLASS.shared_column_options()
         shared_columns = [
@@ -104,6 +109,17 @@ class ProfileDataCollection:
                 column_mapping[column],  # variable is a MeasurementDescription
                 original_file=fname
             ))
+        if not result and df.empty:
+            # Add one profile if this is empty so we can
+            # keep the metadata
+            result = [
+                cls.PROFILE_DATA_CLASS(
+                    df, metadata,
+                    None,
+                    # variable is a MeasurementDescription
+                    original_file=fname
+                )
+            ]
 
         return result
 
