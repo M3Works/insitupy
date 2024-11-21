@@ -86,10 +86,11 @@ class ProfileDataCollection:
         df = cls.PROFILE_DATA_CLASS.read_csv_dataframe(
             fname, columns, header_pos
         )
-        # TODO: do we need to add comments in here for shared columns
-        depth_columns = cls.PROFILE_DATA_CLASS.depth_columns()
+        # add comments in here for shared columns
+        shared_column_options = cls.PROFILE_DATA_CLASS.shared_column_options()
         shared_columns = [
-            c for c, v in column_mapping.items() if v in depth_columns
+            c for c, v in column_mapping.items()
+            if v in shared_column_options
         ]
         variable_columns = [
             c for c in column_mapping.keys() if c not in shared_columns

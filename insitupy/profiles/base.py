@@ -40,7 +40,7 @@ class ProfileData:
         # mapping of column name to measurement type
         self._column_mappings = {}
         # List of measurements to keep
-        self._measurements_to_keep = self.depth_columns() + [self.variable]
+        self._measurements_to_keep = self.shared_column_options() + [self.variable]
 
         self._id = metadata.site_name
         self._dt = metadata.date_time
@@ -75,6 +75,10 @@ class ProfileData:
             cls.META_PARSER.PRIMARY_VARIABLES_CLASS.DEPTH,
             cls.META_PARSER.PRIMARY_VARIABLES_CLASS.BOTTOM_DEPTH
         ]
+
+    @classmethod
+    def shared_column_options(cls):
+        return cls.depth_columns()
 
     def _set_column_mappings(self, input_df):
         # Get rid of columns we don't want and populate column mapping
