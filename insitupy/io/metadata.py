@@ -20,7 +20,7 @@ class MetaDataParser:
     """
     OUT_TIMEZONE = "UTC"
     ID_NAMES = ["pitid", "pit_id"]
-    SITE_NAME_NAMES = ["location"]
+    SITE_NAME_NAMES = ["location", "site_name"]
     LAT_NAMES = ["lat", "latitude"]
     LON_NAMES = ["lon", "lon", "longitude"]
     UTM_EPSG_PREFIX = "269"
@@ -281,6 +281,7 @@ class MetaDataParser:
 
         return result
 
+
     def _preparse_meta(self, meta_lines):
         """
         Organize the header lines into a dictionary with lower case keys
@@ -302,14 +303,17 @@ class MetaDataParser:
                 value = ', '.join(d[1:])
                 value = StringManager.clean_str(value)
 
+            # cast the rough object key to a known key
+            known_name, k_mapping = self.METADATA_VARIABLE_CLASS.from_mapping(k)
+
             # Assign non empty strings to dictionary
             if k and value:
-                data[k] = value.strip(
+                data[known_name] = value.strip(
                     ' '
                 ).replace('"', '').replace('  ', ' ')
 
             elif k and not value:
-                data[k] = None
+                data[known_name] = None
         return data
 
     def parse(self):

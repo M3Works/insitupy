@@ -10,7 +10,7 @@ class BaseMetadataVariables(ExtendableVariables):
     DATETIME = MeasurementDescription(
         'datetime', "Combined date and time",
         ["Date/Local Standard Time", "date/local_standard_time", "datetime",
-         "date&time"],
+         "date&time", "date/time"],
         True
     )
     DATE = MeasurementDescription(
