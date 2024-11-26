@@ -55,7 +55,7 @@ class ProfileData:
             self._df = self._format_df(input_df)
 
         columns = self._df.columns.values
-        if columns and self._depth_layer.code not in columns:
+        if len(columns) > 0 and self._depth_layer.code not in columns:
             raise ValueError(f"Expected {self._depth_layer} in columns")
 
         # List of columns that are not the desired variable
