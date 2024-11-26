@@ -29,7 +29,8 @@ class MetaDataParser:
     METADATA_VARIABLE_CLASS = BaseMetadataVariables
 
     def __init__(
-        self, fname, timezone, header_sep=",", allow_split_lines=False
+        self, fname, timezone, header_sep=",", allow_split_lines=False,
+        id=None, campaign_name=None
     ):
         """
         Args:
@@ -41,12 +42,16 @@ class MetaDataParser:
                 the number of header lines will be the max line starting with
                 the expected character, and lines that don't start with
                 that character will be combined with the previous line
+            id: optional pass in to override id in parse_id
+            campaign_name: optional override for campaign name
         """
         self._fname = fname
         self._input_timezone = timezone
         self._header_sep = header_sep
         self._rough_obj = {}
         self._lat_lon_easting_northing = None
+        self._id = id
+        self._campaign_name = campaign_name
 
         self._allow_split_header_lines = allow_split_lines
 
@@ -61,9 +66,12 @@ class MetaDataParser:
         return self._lat_lon_easting_northing
 
     def parse_id(self) -> str:
-        for k, v in self.rough_obj.items():
-            if k in self.ID_NAMES:
-                return v
+        if self._id is not None:
+            return self._id
+        else:
+            for k, v in self.rough_obj.items():
+                if k in self.ID_NAMES:
+                    return v
 
         raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
 
@@ -255,6 +263,8 @@ class MetaDataParser:
         return epsg
 
     def parse_campaign_name(self) -> str:
+        if self._campaign_name is not None:
+            return self._campaign_name
         for k, v in self.rough_obj.items():
             if k in self.SITE_NAME_NAMES:
                 return v

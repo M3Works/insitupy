@@ -124,16 +124,39 @@ class ProfileDataCollection:
         return result
 
     @classmethod
-    def from_csv(cls, fname, timezone="US/Mountain", header_sep=","):
+    def from_csv(
+        cls, fname, timezone="US/Mountain", header_sep=",", id=None,
+        campaign_name=None
+    ):
+        """
+        Find all profiles in a single csv file
+        Args:
+            fname: path to file
+            timezone: expected timezone in file
+            header_sep: header sep in the file
+            id: Site Id override for the metadata
+            campaign_name: Campaign.name override for the metadata
+
+        Returns:
+            This class with a collection of profiles and metadata
+        """
         # TODO: timezone here (mapped from site?)
         # parse mlutiple files and create an iterable of ProfileData
-        meta_parser = cls.META_PARSER(fname, timezone, header_sep=header_sep)
+        meta_parser = cls.META_PARSER(
+            fname, timezone, header_sep=header_sep, id=id,
+            campaign_name=campaign_name
+        )
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
         profiles = cls._read_csv(
             fname, columns, columns_map, header_pos, metadata
         )
+
+        # ignore profiles with the name 'ignore'
+        profiles = [
+            p for p in profiles if p.variable.code != "ignore"
+        ]
 
         return cls(profiles, metadata)
 
