@@ -159,7 +159,9 @@ class ProfileDataCollection:
 
         # ignore profiles with the name 'ignore'
         profiles = [
-            p for p in profiles if p.variable.code != "ignore"
+            p for p in profiles if
+            # Keep the profile if it is None because we need the metadata
+            (p.variable is None or p.variable.code != "ignore")
         ]
 
         return cls(profiles, metadata)
