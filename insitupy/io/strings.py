@@ -177,7 +177,7 @@ class StringManager:
             if result:
                 unit = result[0].strip().lower()
                 break
-        return result
+        return unit
 
     @classmethod
     def get_alpha_ratio(cls, str_line, encapsulator='""'):
