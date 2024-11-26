@@ -30,7 +30,7 @@ class MetaDataParser:
 
     def __init__(
         self, fname, timezone, header_sep=",", allow_split_lines=False,
-        id=None, campaign_name=None
+        id=None, campaign_name=None, units_map=None
     ):
         """
         Args:
@@ -44,6 +44,7 @@ class MetaDataParser:
                 that character will be combined with the previous line
             id: optional pass in to override id in parse_id
             campaign_name: optional override for campaign name
+            units_map = optional map of variable type to MeasurementDescription 
         """
         self._fname = fname
         self._input_timezone = timezone
@@ -52,12 +53,17 @@ class MetaDataParser:
         self._lat_lon_easting_northing = None
         self._id = id
         self._campaign_name = campaign_name
+        self._units_map = units_map or {}
 
         self._allow_split_header_lines = allow_split_lines
 
     @property
     def rough_obj(self):
         return self._rough_obj
+    
+    @property
+    def units_map(self):
+        return self._units_map
 
     @property
     def lat_lon_easting_northing(self):
@@ -391,19 +397,29 @@ class MetaDataParser:
         """
         # Parse the columns header based on the size of the last line
         # Remove units
-        for c in ['()', '[]']:
-            str_line = StringManager.strip_encapsulated(str_line, c)
+        # for c in ['()', '[]']:
+        #     str_line = StringManager.strip_encapsulated(str_line, c)
 
         raw_cols = str_line.strip('#').split(',')
+        # Clean the raw columns
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
+        # Infer units from the raw columns
+        infered_units = [StringManager.infer_unit_from_key(c) for c in raw_cols]
         final_cols = []
         final_col_map = {}
-        for c in standard_cols:
+        inferred_units_map = {}
+        # Iterate through the columns and map to desired result
+        for c, unit in zip(standard_cols, infered_units):
             mapped_col, col_map = self.PRIMARY_VARIABLES_CLASS.from_mapping(c)
+            # Store the list of columns to use when reading in the
+            # dataframe
             final_cols.append(mapped_col)
+            # Store the map of column name to the known variable
             final_col_map = {**final_col_map, **col_map}
+            # Store the map of column name to inferred unit
+            inferred_units_map[col_map[mapped_col].code] = unit
 
-        return final_cols, final_col_map
+        return final_cols, final_col_map, inferred_units_map
 
     def find_header_info(self, filename=None):
         """
@@ -435,12 +451,17 @@ class MetaDataParser:
             header_pos = None
             header_indicator = None
             columns_map = {}
+            self._units_map = self._units_map
 
         # Find the column names and where it is in the file
         else:
             header_pos, header_indicator = self._find_header_position(lines)
-            # TODO: identify columns, map columns,
-            columns, columns_map = self._parse_columns(lines[header_pos])
+            # identify columns, map columns, and units map
+            columns, columns_map, units_map = self._parse_columns(
+                lines[header_pos]
+            )
+            # Combine with user defined units map
+            self._units_map = {**self._units_map, **units_map}
             LOG.debug(
                 f'Column Data found to be {len(columns)} columns based on'
                 f' Line {header_pos}'

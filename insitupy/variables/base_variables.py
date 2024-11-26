@@ -1,7 +1,7 @@
 import inspect
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple, Dict
 
 
 LOG = logging.getLogger(__name__)
@@ -19,8 +19,6 @@ class MeasurementDescription:
     map_from: List = None  # map to this variable from a list of options
     auto_remap: bool = False  # Auto remap to the column to the code
     match_on_code: bool = True  # Match on the code too
-    # TODO: optional unit we get form 'parse_from' method
-    # unit: str = None
     cast_type = None   # make this float, int, etc
 
 
@@ -81,7 +79,7 @@ class ExtendableVariables:
         return len(self.entries)
 
     @classmethod
-    def from_mapping(cls, input_name):
+    def from_mapping(cls, input_name) -> Tuple[str, Dict[str, MeasurementDescription]]:
         """
         Get the measurement description from an input name.
         This will use the  MeasurementDescription.map_from list to

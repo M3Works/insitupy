@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+from typing import List, Union
 
 LOG = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class StringManager:
         return clean
 
     @staticmethod
-    def get_encapsulated(str_line, encapsulator):
+    def get_encapsulated(str_line, encapsulator) -> List[str]:
         """
         Returns items found in the encapsulator, useful for finding units
 
@@ -79,7 +80,7 @@ class StringManager:
         return result
 
     @classmethod
-    def strip_encapsulated(cls, str_line, encapsulator):
+    def strip_encapsulated(cls, str_line: str, encapsulator: str) -> str:
         """
         Removes from a str anything thats encapusulated by characters and the
         encapsulating chars themselves
@@ -157,6 +158,26 @@ class StringManager:
         key = ''.join([c for c in key if c not in 'ï»¿'])
 
         return key
+
+    @classmethod
+    def infer_unit_from_key(cls, messy: str) -> Union[str, None]:
+        """
+        From a raw column name, infer the unit
+
+        Args:
+            messy: string to be cleaned
+        Returns:
+            unit: inferred unit if it exists
+        """
+        key = messy
+        unit = None
+        # Remove units
+        for c in ['()', '[]']:
+            result = cls.get_encapsulated(key, c)
+            if result:
+                unit = result[0].strip().lower()
+                break
+        return result
 
     @classmethod
     def get_alpha_ratio(cls, str_line, encapsulator='""'):

@@ -22,7 +22,8 @@ class ProfileData:
     def __init__(
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
         variable: MeasurementDescription,
-        original_file=None
+        original_file=None,
+        units_map=None
     ):
         """
         Take df of layered data (SMP, pit, etc)
@@ -30,8 +31,13 @@ class ProfileData:
             input_df: dataframe of data
                 Should include depth and optional bottom depth
                 Should include sample or sample_a, sample_b, etc
+            metadata: ProfileMetaData object
+            variable: description of variable
+            original_file: optional track original file
+            units_map: optional dictionary of column name to unit
 
         """
+        self._units_map = units_map
         self._original_file = original_file
         self._depth_layer = self.depth_columns()[0]
         self._lower_depth_layer = self.depth_columns()[1]
@@ -170,6 +176,10 @@ class ProfileData:
     @property
     def metadata(self):
         return self._metadata
+    
+    @property
+    def units_map(self):
+        return self._units_map
 
     @property
     def latlon(self):

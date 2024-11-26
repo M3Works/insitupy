@@ -69,7 +69,7 @@ class ProfileDataCollection:
     @classmethod
     def _read_csv(
         cls, fname, columns, column_mapping, header_pos,
-        metadata: ProfileMetaData
+        metadata: ProfileMetaData, units_map
     ) -> List[ProfileData]:
         """
         Args:
@@ -78,6 +78,7 @@ class ProfileDataCollection:
             column_mapping: mapping of column name to variable description
             header_pos: skiprows for pd.read_csv
             metadata: metadata for each object
+            units_map: map of column name to unit
 
         Returns:
             a list of ProfileData objects
@@ -107,7 +108,8 @@ class ProfileDataCollection:
             result.append(cls.PROFILE_DATA_CLASS(
                 target_df, metadata,
                 column_mapping[column],  # variable is a MeasurementDescription
-                original_file=fname
+                original_file=fname,
+                units_map=units_map
             ))
         if not result and df.empty:
             # Add one profile if this is empty so we can
@@ -117,7 +119,8 @@ class ProfileDataCollection:
                     df, metadata,
                     None,
                     # variable is a MeasurementDescription
-                    original_file=fname
+                    original_file=fname,
+                    units_map=units_map
                 )
             ]
 
@@ -150,7 +153,8 @@ class ProfileDataCollection:
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
         profiles = cls._read_csv(
-            fname, columns, columns_map, header_pos, metadata
+            fname, columns, columns_map, header_pos, metadata,
+            meta_parser.units_map
         )
 
         # ignore profiles with the name 'ignore'

@@ -36,7 +36,7 @@ class SnowExProfileData(ProfileData):
         else:
             data = cls.read_csv_dataframe(fname, columns, header_pos)
 
-        return cls(data, metadata, variable)
+        return cls(data, metadata, variable, meta_parser.units_map)
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
