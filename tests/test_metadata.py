@@ -84,8 +84,9 @@ def test_columns(fname, expected_cols, data_path):
     """
     Test the columns we expect to pass back from the file
     """
-    obj = MetaDataParser(
-        data_path.joinpath(fname), "US/Mountain"
+    obj = SnowExMetadataParser(
+        data_path.joinpath(fname), "US/Mountain",
+        allow_map_failures=True
     )
     metadata, columns, column_mapping, header_pos = obj.parse()
     assert columns == expected_cols

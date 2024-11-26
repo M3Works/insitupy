@@ -22,10 +22,21 @@ class SnowExProfileData(ProfileData):
 
     @classmethod
     def from_csv(
-        cls, fname, variable: MeasurementDescription, timezone="US/Mountain"
+        cls, fname, variable: MeasurementDescription, timezone="US/Mountain",
+        allow_map_failures=False
     ):
-        # TODO: timezone here (mapped from site?)
-        meta_parser = cls.META_PARSER(fname, timezone)
+        """
+        Args:
+            fname: path to file
+            variable: variable in the file
+            timezone: local timezone for file
+            allow_map_failures: allow metadata and column unknowns
+        Returns:
+            the instantiated class
+        """
+        meta_parser = cls.META_PARSER(
+            fname, timezone, allow_map_failures=allow_map_failures
+        )
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data

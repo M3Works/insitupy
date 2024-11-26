@@ -25,7 +25,28 @@ class TestSnowexPitProfile:
     def test_read_fails(self, fname, variable, data_path):
         file_path = data_path.joinpath(fname)
         with pytest.raises(ValueError):
-            obj = SnowExProfileData.from_csv(file_path, variable)
+            obj = SnowExProfileData.from_csv(
+                file_path, variable, allow_map_failures=True
+            )
+
+    @pytest.mark.parametrize(
+        "fname, variable", [
+            (
+                "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
+                BasePrimaryVariables.PERMITTIVITY
+            ),
+            (
+                "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
+                BasePrimaryVariables.DENSITY
+            ),
+        ]
+    )
+    def test_read_fails_mapping_error(self, fname, variable, data_path):
+        file_path = data_path.joinpath(fname)
+        with pytest.raises(RuntimeError):
+            obj = SnowExProfileData.from_csv(
+                file_path, variable, allow_map_failures=False
+            )
 
     @pytest.mark.parametrize(
         "fname, variable, expected", [
@@ -49,7 +70,9 @@ class TestSnowexPitProfile:
     )
     def test_mean(self, fname, variable, expected, data_path):
         file_path = data_path.joinpath(fname)
-        obj = SnowExProfileData.from_csv(file_path, variable)
+        obj = SnowExProfileData.from_csv(
+            file_path, variable, allow_map_failures=True
+        )
         result = obj.mean
         if np.isnan(expected):
             assert np.isnan(result)
@@ -78,6 +101,8 @@ class TestSnowexPitProfile:
     )
     def test_total_depth(self, fname, variable, expected, data_path):
         file_path = data_path.joinpath(fname)
-        obj = SnowExProfileData.from_csv(file_path, variable)
+        obj = SnowExProfileData.from_csv(
+            file_path, variable, allow_map_failures=True
+        )
         result = obj.total_depth
         assert result == pytest.approx(expected)

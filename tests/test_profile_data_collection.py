@@ -41,7 +41,9 @@ class TestProfileDataCollection:
     @pytest.fixture
     def obj(self, fname, data_path):
         file_path = data_path.joinpath(fname)
-        obj = DataCollectionExtended.from_csv(file_path)
+        obj = DataCollectionExtended.from_csv(
+            file_path, allow_map_failure=True
+        )
         return obj
 
     def test_variables(self, obj, expected_variables, expected_means):

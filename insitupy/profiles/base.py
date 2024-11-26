@@ -262,7 +262,9 @@ class ProfileData:
         raise NotImplementedError("Not implemented")
 
     @classmethod
-    def from_csv(self, fname, variable: ExtendableVariables):
+    def from_csv(
+        self, fname, variable: ExtendableVariables, allow_map_failures=False
+    ):
         raise NotImplementedError("Not implemented")
 
 

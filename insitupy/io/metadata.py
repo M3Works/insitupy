@@ -31,7 +31,7 @@ class MetaDataParser:
     def __init__(
         self, fname, timezone, header_sep=",", allow_split_lines=False,
         allow_map_failures=False,
-        id=None, campaign_name=None, units_map=None
+        _id=None, campaign_name=None, units_map=None
     ):
         """
         Args:
@@ -54,7 +54,7 @@ class MetaDataParser:
         self._header_sep = header_sep
         self._rough_obj = {}
         self._lat_lon_easting_northing = None
-        self._id = id
+        self._id = _id
         self._campaign_name = campaign_name
         self._units_map = units_map or {}
 

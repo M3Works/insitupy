@@ -109,7 +109,7 @@ class ProfileDataCollection:
                 target_df, metadata,
                 column_mapping[column],  # variable is a MeasurementDescription
                 original_file=fname,
-                units_map=units_map
+                units_map=units_map,
             ))
         if not result and df.empty:
             # Add one profile if this is empty so we can
@@ -128,8 +128,8 @@ class ProfileDataCollection:
 
     @classmethod
     def from_csv(
-        cls, fname, timezone="US/Mountain", header_sep=",", id=None,
-        campaign_name=None
+        cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
+        campaign_name=None, allow_map_failure=False
     ):
         """
         Find all profiles in a single csv file
@@ -137,8 +137,9 @@ class ProfileDataCollection:
             fname: path to file
             timezone: expected timezone in file
             header_sep: header sep in the file
-            id: Site Id override for the metadata
+            site_id: Site id override for the metadata
             campaign_name: Campaign.name override for the metadata
+            allow_map_failure: allow metadata and column unknowns
 
         Returns:
             This class with a collection of profiles and metadata
@@ -146,8 +147,8 @@ class ProfileDataCollection:
         # TODO: timezone here (mapped from site?)
         # parse mlutiple files and create an iterable of ProfileData
         meta_parser = cls.META_PARSER(
-            fname, timezone, header_sep=header_sep, id=id,
-            campaign_name=campaign_name
+            fname, timezone, header_sep=header_sep, _id=site_id,
+            campaign_name=campaign_name, allow_map_failures=allow_map_failure
         )
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()
