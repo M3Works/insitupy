@@ -23,7 +23,8 @@ class ProfileData:
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
         variable: MeasurementDescription,
         original_file=None,
-        units_map=None
+        units_map=None,
+        allow_map_failure=False
     ):
         """
         Take df of layered data (SMP, pit, etc)
@@ -35,6 +36,8 @@ class ProfileData:
             variable: description of variable
             original_file: optional track original file
             units_map: optional dictionary of column name to unit
+            allow_map_failures: if a mapping fails, warn us and use the
+                original string (default False)
 
         """
         self._units_map = units_map
@@ -42,6 +45,7 @@ class ProfileData:
         self._depth_layer = self.depth_columns()[0]
         self._lower_depth_layer = self.depth_columns()[1]
         self._metadata = metadata
+        self._allow_map_failure = allow_map_failure
         self.variable: MeasurementDescription = variable
         # mapping of column name to measurement type
         self._column_mappings = {}
@@ -96,7 +100,9 @@ class ProfileData:
         for c in columns:
             # Find the variable associated with each column
             # and store a map
-            cn, cm = self.META_PARSER.PRIMARY_VARIABLES_CLASS.from_mapping(c)
+            cn, cm = self.META_PARSER.PRIMARY_VARIABLES_CLASS.from_mapping(
+                c, allow_failure=self._allow_map_failure
+            )
             # join with existing mappings
             self._column_mappings = {**cm, **self._column_mappings}
 
@@ -176,7 +182,7 @@ class ProfileData:
     @property
     def metadata(self):
         return self._metadata
-    
+
     @property
     def units_map(self):
         return self._units_map

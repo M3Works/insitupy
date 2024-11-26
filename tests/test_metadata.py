@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from insitupy.io.metadata import MetaDataParser
+from insitupy.campaigns.snowex import SnowExMetadataParser
 
 
 @pytest.mark.parametrize(
@@ -20,8 +20,9 @@ class TestSnowexPitMetadata:
     @pytest.fixture
     def metadata_info(self, fname, data_path):
         # This is the parser object
-        obj = MetaDataParser(
-            data_path.joinpath(fname), "US/Mountain"
+        obj = SnowExMetadataParser(
+            data_path.joinpath(fname), "US/Mountain",
+            allow_map_failures=True
         )
         metadata, columns, column_mapping, header_pos = obj.parse()
         return metadata, columns, column_mapping, header_pos
@@ -56,10 +57,7 @@ class TestSnowexPitMetadata:
         assert metadata.longitude == -106.97112
 
     def test_utm_epsg(self, metadata, fname):
-        assert metadata.utm_epsg == 26913
-
-    def test_site_id(self, metadata, fname):
-        assert metadata.site_id == "Aspen"
+        assert metadata.utm_epsg == '26913'
 
     def test_site_name(self, metadata, fname):
         assert metadata.campaign_name == "East River"

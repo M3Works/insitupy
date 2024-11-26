@@ -79,11 +79,17 @@ class ExtendableVariables:
         return len(self.entries)
 
     @classmethod
-    def from_mapping(cls, input_name) -> Tuple[str, Dict[str, MeasurementDescription]]:
+    def from_mapping(
+        cls, input_name, allow_failure=False
+    ) -> Tuple[str, Dict[str, MeasurementDescription]]:
         """
         Get the measurement description from an input name.
         This will use the  MeasurementDescription.map_from list to
         check, in order, which variable we should use
+
+        Args:
+            input_name: string input name
+            allow_failure: return the original name if we fail
 
         Returns:
             column name
@@ -108,7 +114,13 @@ class ExtendableVariables:
                 column_mapping[result] = entry
                 break
         if result is None:
-            raise RuntimeError(f"Could not find mapping for {input_name}")
+            if allow_failure:
+                # We failed to find a mapping, but want to continue
+                LOG.warning(f"Could not find mapping for {input_name}")
+                result = input_name
+                column_mapping[result] = None
+            else:
+                raise RuntimeError(f"Could not find mapping for {input_name}")
         LOG.debug(
             f"Mapping {result} to {result} (type {column_mapping[result]})"
         )

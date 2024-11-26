@@ -30,6 +30,7 @@ class MetaDataParser:
 
     def __init__(
         self, fname, timezone, header_sep=",", allow_split_lines=False,
+        allow_map_failures=False,
         id=None, campaign_name=None, units_map=None
     ):
         """
@@ -42,9 +43,11 @@ class MetaDataParser:
                 the number of header lines will be the max line starting with
                 the expected character, and lines that don't start with
                 that character will be combined with the previous line
+            allow_map_failures: if a mapping fails, warn us and use the
+                original string (default False)
             id: optional pass in to override id in parse_id
             campaign_name: optional override for campaign name
-            units_map = optional map of variable type to MeasurementDescription 
+            units_map = optional map of variable type to MeasurementDescription
         """
         self._fname = fname
         self._input_timezone = timezone
@@ -56,11 +59,12 @@ class MetaDataParser:
         self._units_map = units_map or {}
 
         self._allow_split_header_lines = allow_split_lines
+        self._allow_map_failures = allow_map_failures
 
     @property
     def rough_obj(self):
         return self._rough_obj
-    
+
     @property
     def units_map(self):
         return self._units_map
@@ -297,7 +301,6 @@ class MetaDataParser:
 
         return result
 
-
     def _preparse_meta(self, meta_lines):
         """
         Organize the header lines into a dictionary with lower case keys
@@ -320,9 +323,11 @@ class MetaDataParser:
                 value = StringManager.clean_str(value)
 
             # cast the rough object key to a known key
-            known_name, k_mapping = self.METADATA_VARIABLE_CLASS.from_mapping(k)
+            known_name, k_mapping = self.METADATA_VARIABLE_CLASS.from_mapping(
+                k, allow_failure=self._allow_map_failures
+            )
 
-            # Assign non empty strings to dictionary
+            # Assign non-empty strings to dictionary
             if k and value:
                 data[known_name] = value.strip(
                     ' '
@@ -410,7 +415,9 @@ class MetaDataParser:
         inferred_units_map = {}
         # Iterate through the columns and map to desired result
         for c, unit in zip(standard_cols, infered_units):
-            mapped_col, col_map = self.PRIMARY_VARIABLES_CLASS.from_mapping(c)
+            mapped_col, col_map = self.PRIMARY_VARIABLES_CLASS.from_mapping(
+                c, allow_failure=self._allow_map_failures
+            )
             # Store the list of columns to use when reading in the
             # dataframe
             final_cols.append(mapped_col)
