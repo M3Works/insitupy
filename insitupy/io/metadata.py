@@ -194,6 +194,45 @@ class MetaDataParser:
 
         return dt
 
+    def _parse_location_from_raw(self):
+        """
+        Initial parse of lat, lon, easting, northing from
+        the rough object
+        """
+        lat = None
+        lon = None
+        easting = None
+        northing = None
+        for k, v in self.rough_obj.items():
+            if k in self.LAT_NAMES:
+                lat = float(v)
+            elif k in self.LON_NAMES:
+                lon = float(v)
+            elif k == "easting":
+                easting = v
+            elif k == "northing":
+                northing = v
+
+        return lat, lon, easting, northing
+
+    def lat_lon_from_easting_northing(self, easting, northing):
+        zone_number = self.parse_utm_epsg()
+        if isinstance(zone_number, str):
+            raise RuntimeError(
+                f"{zone_number} should be an integer: {self._fname}"
+            )
+        # Get the last two digits
+        zone_number = int(str(zone_number)[-2:])
+        try:
+            lat, lon = utm.to_latlon(
+                float(easting), float(northing), int(zone_number),
+                northern=self.NORTHERN_HEMISPHERE)
+        except Exception as e:
+            LOG.error(e)
+            raise RuntimeError(f"Failed with {easting}, {northing}")
+
+        return lat, lon
+
     def _parse_location(self):
         """
         Parse the lat and lon from the rough input object
@@ -207,48 +246,13 @@ class MetaDataParser:
 
         returns lat, lon, easting, northing
         """
-        lat = None
-        lon = None
-        easting = None
-        northing = None
-        for k, v in self.rough_obj.items():
-            # TODO: migrate this logic to 'metadata_variables_class'
-            if k in self.LAT_NAMES:
-                lat = float(v)
-            elif k in self.LON_NAMES:
-                lon = float(v)
-            elif k == "easting":
-                easting = v
-            elif k == "northing":
-                northing = v
+        lat, lon, easting, northing = self._parse_location_from_raw()
 
         # Do nothing first
-        if lat and lon and easting and northing:
-            LOG.info("All location info is in the file")
-        elif lat and lon:
-            # do we want to do this?
-            # zone_number = self.parse_utm_epsg()[-2:]
-            # LOG.debug("Calculating the easting and northing")
-            # easting, northing, *_ = utm.from_latlon(
-            #     lat, lon, force_zone_number=int(zone_number)
-            # )
-            pass
+        if lat and lon:
+            LOG.info("Latitude and Longitude parsed from the file")
         elif easting and northing:
-            zone_number = self.parse_utm_epsg()
-            if isinstance(zone_number, str):
-                raise RuntimeError(
-                    f"{zone_number} should be an integer: {self._fname}"
-                )
-            # Get the last two digits
-            zone_number = int(str(zone_number)[-2:])
-            try:
-                lat, lon = utm.to_latlon(
-                    float(easting), float(northing), int(zone_number),
-                    northern=self.NORTHERN_HEMISPHERE)
-            except Exception as e:
-                LOG.error(e)
-                raise RuntimeError(f"Failed with {easting}, {northing}")
-
+            lat, lon = self.lat_lon_from_easting_northing(easting, northing)
         else:
             raise ValueError(
                 f"Could not parse location from {self.rough_obj}"
