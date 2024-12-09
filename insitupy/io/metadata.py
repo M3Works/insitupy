@@ -1,12 +1,14 @@
 from datetime import timedelta
 
 import logging
+from typing import List
+
 import pandas as pd
 import pytz
 import utm
 
 from .strings import StringManager
-from .variables import ProfileVariables
+from ..variables import BaseMetadataVariables, BasePrimaryVariables
 from ..profiles.metadata import ProfileMetaData
 
 LOG = logging.getLogger(__name__)
@@ -18,17 +20,18 @@ class MetaDataParser:
     """
     OUT_TIMEZONE = "UTC"
     ID_NAMES = ["pitid", "pit_id"]
-    SITE_ID_NAMES = ["site"]
-    SITE_NAME_NAMES = ["location"]
+    SITE_NAME_NAMES = ["location", "site_name"]
     LAT_NAMES = ["lat", "latitude"]
     LON_NAMES = ["lon", "lon", "longitude"]
     UTM_EPSG_PREFIX = "269"
     NORTHERN_HEMISPHERE = True
-    PRIMARY_VARIABLES_CLASS = ProfileVariables
-    METADATA_VARIABLE_CLASS = ProfileVariables
+    PRIMARY_VARIABLES_CLASS = BasePrimaryVariables
+    METADATA_VARIABLE_CLASS = BaseMetadataVariables
 
     def __init__(
-        self, fname, timezone, header_sep=",", allow_split_lines=False
+        self, fname, timezone, header_sep=",", allow_split_lines=False,
+        allow_map_failures=False,
+        _id=None, campaign_name=None, units_map=None
     ):
         """
         Args:
@@ -40,18 +43,31 @@ class MetaDataParser:
                 the number of header lines will be the max line starting with
                 the expected character, and lines that don't start with
                 that character will be combined with the previous line
+            allow_map_failures: if a mapping fails, warn us and use the
+                original string (default False)
+            id: optional pass in to override id in parse_id
+            campaign_name: optional override for campaign name
+            units_map = optional map of variable type to MeasurementDescription
         """
         self._fname = fname
         self._input_timezone = timezone
         self._header_sep = header_sep
         self._rough_obj = {}
         self._lat_lon_easting_northing = None
+        self._id = _id
+        self._campaign_name = campaign_name
+        self._units_map = units_map or {}
 
         self._allow_split_header_lines = allow_split_lines
+        self._allow_map_failures = allow_map_failures
 
     @property
     def rough_obj(self):
         return self._rough_obj
+
+    @property
+    def units_map(self):
+        return self._units_map
 
     @property
     def lat_lon_easting_northing(self):
@@ -60,9 +76,12 @@ class MetaDataParser:
         return self._lat_lon_easting_northing
 
     def parse_id(self) -> str:
-        for k, v in self.rough_obj.items():
-            if k in self.ID_NAMES:
-                return v
+        if self._id is not None:
+            return self._id
+        else:
+            for k, v in self.rough_obj.items():
+                if k in self.ID_NAMES:
+                    return v
 
         raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
 
@@ -136,6 +155,7 @@ class MetaDataParser:
         if in_timezone is not None:
             in_tz = pytz.timezone(in_timezone)
         # Otherwise assume incoming data is the same timezone
+        # TODO: how do we handle row based timezone
         else:
             raise ValueError("We did not recieve a valid in_timezone")
 
@@ -214,10 +234,20 @@ class MetaDataParser:
             # )
             pass
         elif easting and northing:
-            zone_number = self.parse_utm_epsg()[-2:]
-            lat, lon = utm.to_latlon(
-                easting, northing, int(zone_number),
-                northern=self.NORTHERN_HEMISPHERE)
+            zone_number = self.parse_utm_epsg()
+            if isinstance(zone_number, str):
+                raise RuntimeError(
+                    f"{zone_number} should be an integer: {self._fname}"
+                )
+            # Get the last two digits
+            zone_number = int(str(zone_number)[-2:])
+            try:
+                lat, lon = utm.to_latlon(
+                    float(easting), float(northing), int(zone_number),
+                    northern=self.NORTHERN_HEMISPHERE)
+            except Exception as e:
+                raise RuntimeError(f"Failed with {easting}, {northing}")
+
         else:
             raise ValueError(
                 f"Could not parse location from {self.rough_obj}"
@@ -230,7 +260,7 @@ class MetaDataParser:
     def parse_longitude(self) -> float:
         return self.lat_lon_easting_northing[1]
 
-    def parse_utm_epsg(self) -> str:
+    def parse_utm_epsg(self) -> int:
         info = self.rough_obj
         epsg = None
         if 'utm_zone' in info.keys():
@@ -239,16 +269,12 @@ class MetaDataParser:
             epsg = int(f"{self.UTM_EPSG_PREFIX}{utm_zone}")
         elif 'epsg' in info.keys():
             epsg = info["epsg"]
+        # TODO: row based utm?
         return epsg
 
-    def parse_site_id(self) -> str:
-        for k, v in self.rough_obj.items():
-            if k in self.SITE_ID_NAMES:
-                return v
-
-        raise RuntimeError(f"Failed to parse Site ID from {self.rough_obj}")
-
-    def parse_site_name(self) -> str:
+    def parse_campaign_name(self) -> str:
+        if self._campaign_name is not None:
+            return self._campaign_name
         for k, v in self.rough_obj.items():
             if k in self.SITE_NAME_NAMES:
                 return v
@@ -260,6 +286,17 @@ class MetaDataParser:
         for k, v in self.rough_obj.items():
             if k in ["flags"]:
                 result = v
+                break
+
+        return result
+
+    def parse_observers(self) -> List[str]:
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in ["observers"]:
+                entry = v
+                result = entry.split(", ")
+                result = [r.strip() for r in result]
                 break
 
         return result
@@ -285,14 +322,19 @@ class MetaDataParser:
                 value = ', '.join(d[1:])
                 value = StringManager.clean_str(value)
 
-            # Assign non empty strings to dictionary
+            # cast the rough object key to a known key
+            known_name, k_mapping = self.METADATA_VARIABLE_CLASS.from_mapping(
+                k, allow_failure=self._allow_map_failures
+            )
+
+            # Assign non-empty strings to dictionary
             if k and value:
-                data[k] = value.strip(
+                data[known_name] = value.strip(
                     ' '
                 ).replace('"', '').replace('  ', ' ')
 
             elif k and not value:
-                data[k] = None
+                data[known_name] = None
         return data
 
     def parse(self):
@@ -306,21 +348,22 @@ class MetaDataParser:
         Returns:
             (metadata object, column list, position of header in file)
         """
-        meta_lines, columns, header_position = self.find_header_info(self._fname)
+        (meta_lines, columns,
+         columns_map, header_position) = self.find_header_info(self._fname)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = ProfileMetaData(
-            id=self.parse_id(),
+            site_name=self.parse_id(),
             date_time=self.parse_date_time(),
             latitude=self.parse_latitude(),
             longitude=self.parse_longitude(),
-            utm_epsg=self.parse_utm_epsg(),
-            site_id=self.parse_site_id(),
-            site_name=self.parse_site_name(),
+            utm_epsg=str(self.parse_utm_epsg()),
+            campaign_name=self.parse_campaign_name(),
             flags=self.parse_flags(),
+            observers=self.parse_observers()
         )
 
-        return metadata, columns, header_position
+        return metadata, columns, columns_map, header_position
 
     def _parse_header(self, lines):
         # Key value pairs are separate by some separator provided.
@@ -359,17 +402,31 @@ class MetaDataParser:
         """
         # Parse the columns header based on the size of the last line
         # Remove units
-        for c in ['()', '[]']:
-            str_line = StringManager.strip_encapsulated(str_line, c)
+        # for c in ['()', '[]']:
+        #     str_line = StringManager.strip_encapsulated(str_line, c)
 
         raw_cols = str_line.strip('#').split(',')
+        # Clean the raw columns
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
+        # Infer units from the raw columns
+        infered_units = [StringManager.infer_unit_from_key(c) for c in raw_cols]
         final_cols = []
-        for c in standard_cols:
-            mapped_col, col_map = self.PRIMARY_VARIABLES_CLASS.from_mapping(c)
+        final_col_map = {}
+        inferred_units_map = {}
+        # Iterate through the columns and map to desired result
+        for c, unit in zip(standard_cols, infered_units):
+            mapped_col, col_map = self.PRIMARY_VARIABLES_CLASS.from_mapping(
+                c, allow_failure=self._allow_map_failures
+            )
+            # Store the list of columns to use when reading in the
+            # dataframe
             final_cols.append(mapped_col)
+            # Store the map of column name to the known variable
+            final_col_map = {**final_col_map, **col_map}
+            # Store the map of column name to inferred unit
+            inferred_units_map[col_map[mapped_col].code] = unit
 
-        return final_cols
+        return final_cols, final_col_map, inferred_units_map
 
     def find_header_info(self, filename=None):
         """
@@ -400,12 +457,18 @@ class MetaDataParser:
             columns = None
             header_pos = None
             header_indicator = None
+            columns_map = {}
+            self._units_map = self._units_map
 
         # Find the column names and where it is in the file
         else:
             header_pos, header_indicator = self._find_header_position(lines)
-            # TODO: identify columns, map columns,
-            columns = self._parse_columns(lines[header_pos])
+            # identify columns, map columns, and units map
+            columns, columns_map, units_map = self._parse_columns(
+                lines[header_pos]
+            )
+            # Combine with user defined units map
+            self._units_map = {**self._units_map, **units_map}
             LOG.debug(
                 f'Column Data found to be {len(columns)} columns based on'
                 f' Line {header_pos}'
@@ -422,7 +485,7 @@ class MetaDataParser:
         str_data = " ".join(final_lines).split('#')
         str_data = [ln.strip() for ln in str_data if ln]
 
-        return str_data, columns, header_pos
+        return str_data, columns, columns_map, header_pos
 
     def _iterative_header_pos_search(self, lines, n_columns, header_indicator):
         # Use these to monitor if a larger column count is found

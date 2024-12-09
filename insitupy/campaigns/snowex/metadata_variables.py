@@ -9,29 +9,29 @@ class SnowExMetadataVariables(BaseMetadataVariables):
     """
     TOTAL_DEPTH = MeasurementDescription(
         'total_depth', "Total depth of measurement",
-        ['total_snow_depth']
+        ['total_snow_depth'], auto_remap=True
     )
     LATITUDE = MeasurementDescription(
         'latitude', "Latitude",
-        ['lat', 'latitude']
+        ['lat', 'latitude'], auto_remap=True
     )
     LONGITUDE = MeasurementDescription(
         'longitude', "Longitude",
-        ['long', 'lon', 'longitude']
+        ['long', 'lon', 'longitude'], auto_remap=True
     )
     NORTHING = MeasurementDescription(
         'northing', "UTM Northing",
-        ['northing', 'utm_wgs84_northing'], True
+        ['northing', 'utm_wgs84_northing'], auto_remap=True
     )
     EASTING = MeasurementDescription(
         'easting', "UTM Easting",
-        ['easting', 'utm_wgs84_easting'], True
+        ['easting', 'utm_wgs84_easting'], auto_remap=True
     )
     UTM_ZONE = MeasurementDescription(
         'utm_zone', "UTM Zone",
-        ['utmzone', 'utm_zone']
+        ['utmzone', 'utm_zone'], auto_remap=True
     )
     ELEVATION = MeasurementDescription(
         'elevation', "Elevation",
-        ['elev_m', 'elevation', 'elevationwgs84'], True
+        ['elev_m', 'elevation', 'elevationwgs84'], auto_remap=True
     )

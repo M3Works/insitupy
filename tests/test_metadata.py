@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from insitupy.campaigns.metadata import MetaDataParser
+from insitupy.campaigns.snowex import SnowExMetadataParser
 
 
 @pytest.mark.parametrize(
@@ -20,11 +20,12 @@ class TestSnowexPitMetadata:
     @pytest.fixture
     def metadata_info(self, fname, data_path):
         # This is the parser object
-        obj = MetaDataParser(
-            data_path.joinpath(fname), "US/Mountain"
+        obj = SnowExMetadataParser(
+            data_path.joinpath(fname), "US/Mountain",
+            allow_map_failures=True
         )
-        metadata, columns, header_pos = obj.parse()
-        return metadata, columns, header_pos
+        metadata, columns, column_mapping, header_pos = obj.parse()
+        return metadata, columns, column_mapping, header_pos
 
     @pytest.fixture
     def metadata(self, metadata_info):
@@ -36,12 +37,12 @@ class TestSnowexPitMetadata:
 
     @pytest.fixture
     def header_pos(self, metadata_info):
-        return metadata_info[2]
+        return metadata_info[3]
 
     # fname needs to be in test since it is a class
     # level parameterization
     def test_id(self, metadata, fname):
-        assert metadata.id == "COERAP_20200427_0845"
+        assert metadata.site_name == "COERAP_20200427_0845"
 
     def test_date_time(self, metadata, fname):
         # converted from mountain time
@@ -56,13 +57,10 @@ class TestSnowexPitMetadata:
         assert metadata.longitude == -106.97112
 
     def test_utm_epsg(self, metadata, fname):
-        assert metadata.utm_epsg == 26913
-
-    def test_site_id(self, metadata, fname):
-        assert metadata.site_id == "Aspen"
+        assert metadata.utm_epsg == '26913'
 
     def test_site_name(self, metadata, fname):
-        assert metadata.site_name == "East River"
+        assert metadata.campaign_name == "East River"
 
     def test_flags(self, metadata, fname):
         assert metadata.flags is None
@@ -76,18 +74,19 @@ class TestSnowexPitMetadata:
         ("SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
          ['depth', 'bottom_depth', 'density_a', 'density_b', 'density_c']),
         ("SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-         ['depth', 'bottom_depth', 'avg_density', 'permittivity_a',
+         ['depth', 'bottom_depth', 'density', 'permittivity_a',
           'permittivity_b', 'lwc_vol_a', 'lwc_vol_b']),
         ("SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv",
-         ['depth', 'temperature'])
+         ['depth', 'snow_temperature'])
     ]
 )
 def test_columns(fname, expected_cols, data_path):
     """
     Test the columns we expect to pass back from the file
     """
-    obj = MetaDataParser(
-        data_path.joinpath(fname), "US/Mountain"
+    obj = SnowExMetadataParser(
+        data_path.joinpath(fname), "US/Mountain",
+        allow_map_failures=True
     )
-    metadata, columns, header_pos = obj.parse()
+    metadata, columns, column_mapping, header_pos = obj.parse()
     assert columns == expected_cols

@@ -1,7 +1,7 @@
 import inspect
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple, Dict
 
 
 LOG = logging.getLogger(__name__)
@@ -17,9 +17,8 @@ class MeasurementDescription:
     code: str = "-1"  # code used within the applicable API
     description: str = None  # description of the sensor
     map_from: List = None  # map to this variable from a list of options
-    remap: bool = False  # Auto remap to the column to the code
-    # TODO: optional unit we get form 'parse_from' method
-    # unit: str = None
+    auto_remap: bool = False  # Auto remap to the column to the code
+    match_on_code: bool = True  # Match on the code too
     cast_type = None   # make this float, int, etc
 
 
@@ -79,32 +78,49 @@ class ExtendableVariables:
     def __len__(self):
         return len(self.entries)
 
-    # TODO: value mapping for casting
     @classmethod
-    def from_mapping(cls, input_name):
+    def from_mapping(
+        cls, input_name, allow_failure=False
+    ) -> Tuple[str, Dict[str, MeasurementDescription]]:
         """
         Get the measurement description from an input name.
         This will use the  MeasurementDescription.map_from list to
         check, in order, which variable we should use
 
+        Args:
+            input_name: string input name
+            allow_failure: return the original name if we fail
+
         Returns:
             column name
             column mapping (map of name to MeasurementDescription)
         """
+        lower_name = input_name.lower()
         result = None
         # Map column name to variable type
         column_mapping = {}
         for entry in cls():
-            if entry.map_from and input_name.lower() in entry.map_from:
+            # Check if we match directly on the code
+            code_match = entry.match_on_code and lower_name == entry.code
+            # Check if we match from the list of possible matches
+            map_match = entry.map_from and lower_name in entry.map_from
+            if code_match or map_match:
                 # Remap to code
-                if entry.remap:
+                if entry.auto_remap:
                     result = entry.code
                 else:
                     result = input_name
+                # store a map of the column name to the variable description
                 column_mapping[result] = entry
                 break
         if result is None:
-            raise RuntimeError(f"Could not find mapping for {input_name}")
+            if allow_failure:
+                # We failed to find a mapping, but want to continue
+                LOG.warning(f"Could not find mapping for {input_name}")
+                result = input_name
+                column_mapping[result] = None
+            else:
+                raise RuntimeError(f"Could not find mapping for {input_name}")
         LOG.debug(
             f"Mapping {result} to {result} (type {column_mapping[result]})"
         )

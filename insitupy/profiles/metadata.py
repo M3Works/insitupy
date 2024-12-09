@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 import pandas as pd
 
@@ -8,12 +9,12 @@ class ProfileMetaData:
     """
     Single instance of Metadata associated with a profile
     """
-    id: str
+    site_name: str
     date_time: pd.Timestamp
     latitude: float
     longitude: float
     utm_epsg: str = None  # the EPSG for the utm zone
-    site_id: str = None
-    site_name: str = None
+    campaign_name: str = None
     flags: str = None
     comments: str = None
+    observers: List[str] = None
