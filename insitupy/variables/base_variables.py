@@ -125,13 +125,3 @@ class ExtendableVariables:
             f"Mapping {result} to {result} (type {column_mapping[result]})"
         )
         return result, column_mapping
-
-
-
-
-
-
-
-
-
-

@@ -166,4 +166,3 @@ class ProfileDataCollection:
         ]
 
         return cls(profiles, metadata)
-

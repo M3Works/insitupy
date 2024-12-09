@@ -25,7 +25,7 @@ class TestSnowexPitProfile:
     def test_read_fails(self, fname, variable, data_path):
         file_path = data_path.joinpath(fname)
         with pytest.raises(ValueError):
-            obj = SnowExProfileData.from_csv(
+            SnowExProfileData.from_csv(
                 file_path, variable, allow_map_failures=True
             )
 
@@ -44,7 +44,7 @@ class TestSnowexPitProfile:
     def test_read_fails_mapping_error(self, fname, variable, data_path):
         file_path = data_path.joinpath(fname)
         with pytest.raises(RuntimeError):
-            obj = SnowExProfileData.from_csv(
+            SnowExProfileData.from_csv(
                 file_path, variable, allow_map_failures=False
             )
 

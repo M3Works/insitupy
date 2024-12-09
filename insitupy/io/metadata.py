@@ -246,6 +246,7 @@ class MetaDataParser:
                     float(easting), float(northing), int(zone_number),
                     northern=self.NORTHERN_HEMISPHERE)
             except Exception as e:
+                LOG.error(e)
                 raise RuntimeError(f"Failed with {easting}, {northing}")
 
         else:

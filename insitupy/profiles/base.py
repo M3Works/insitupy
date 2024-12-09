@@ -50,7 +50,9 @@ class ProfileData:
         # mapping of column name to measurement type
         self._column_mappings = {}
         # List of measurements to keep
-        self._measurements_to_keep = self.shared_column_options() + [self.variable]
+        self._measurements_to_keep = (
+            self.shared_column_options() + [self.variable]
+        )
 
         self._id = metadata.site_name
         self._dt = metadata.date_time
@@ -218,7 +220,9 @@ class ProfileData:
             return np.nan
         if self._has_layers:
             # height weighted mean for these layers
-            thickness = self._df[self.META_PARSER.PRIMARY_VARIABLES_CLASS.LAYER_THICKNESS.code]
+            thickness = self._df[
+                self.META_PARSER.PRIMARY_VARIABLES_CLASS.LAYER_THICKNESS.code
+            ]
             # this works for a weighted mean, but is not assumed to be
             # the total thickness of the snowpack
             thickness_total = thickness.sum()
@@ -266,7 +270,6 @@ class ProfileData:
         self, fname, variable: ExtendableVariables, allow_map_failures=False
     ):
         raise NotImplementedError("Not implemented")
-
 
 
 def standardize_depth(depths, desired_format='snow_height', is_smp=False):
