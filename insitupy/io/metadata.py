@@ -101,8 +101,8 @@ class MetaDataParser:
         # Handle data dates and times
         if 'date' in keys and 'time' in keys:
             # Assume MMDDYY format
-            if len(row['date']) == 6:
-                dt = row['date']
+            if len(str(row['date'])) == 6:
+                dt = str(row['date'])
                 # Put into YY-MM-DD
                 row['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
                 # Allow for nan time
@@ -110,7 +110,7 @@ class MetaDataParser:
                     row['time']
                 )
 
-            date_str = row["date"]
+            date_str = str(row["date"])
             if row["time"] is not None:
                 date_str += f" {row['time']}"
             d = pd.to_datetime(date_str)
@@ -177,7 +177,7 @@ class MetaDataParser:
 
         # If we didn't find date/time combined.
         if d is None:
-            d = self._handle_separate_datetime(row, keys, out_tz)
+            d = cls._handle_separate_datetime(row, keys, out_tz)
 
         if in_timezone is not None:
             d = d.tz_localize(in_tz)
@@ -212,10 +212,10 @@ class MetaDataParser:
         lon = None
         easting = None
         northing = None
-        for k, v in items():
-            if k in self.LAT_NAMES:
+        for k, v in row.items():
+            if k in cls.LAT_NAMES:
                 lat = float(v)
-            elif k in self.LON_NAMES:
+            elif k in cls.LON_NAMES:
                 lon = float(v)
             elif k == "easting":
                 easting = v
@@ -257,7 +257,7 @@ class MetaDataParser:
 
         returns lat, lon, easting, northing
         """
-        lat, lon, easting, northing = self._parse_location_from_raw(row)
+        lat, lon, easting, northing = cls._parse_location_from_raw(row)
 
         # Do nothing first
         if lat and lon:
@@ -293,8 +293,8 @@ class MetaDataParser:
 
     @classmethod
     def parse_campaign_from_row(cls, row):
-        for k, v in self.row.items():
-            if k in self.SITE_NAME_NAMES:
+        for k, v in row.items():
+            if k in cls.SITE_NAME_NAMES:
                 return v
         return None
 
