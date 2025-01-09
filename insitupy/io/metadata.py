@@ -72,7 +72,9 @@ class MetaDataParser:
     @property
     def lat_lon_easting_northing(self):
         if self._lat_lon_easting_northing is None:
-            self._lat_lon_easting_northing = self._parse_location()
+            self._lat_lon_easting_northing = self._parse_location(
+                self.rough_obj
+            )
         return self._lat_lon_easting_northing
 
     def parse_id(self) -> str:
@@ -85,7 +87,8 @@ class MetaDataParser:
 
         raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
 
-    def _handle_separate_datetime(self, keys, out_tz):
+    @staticmethod
+    def _handle_separate_datetime(row, keys, out_tz):
         """
         Handle a separate date and time entry
 
@@ -98,34 +101,34 @@ class MetaDataParser:
         # Handle data dates and times
         if 'date' in keys and 'time' in keys:
             # Assume MMDDYY format
-            if len(self.rough_obj['date']) == 6:
-                dt = self.rough_obj['date']
+            if len(row['date']) == 6:
+                dt = row['date']
                 # Put into YY-MM-DD
-                self.rough_obj['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
+                row['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
                 # Allow for nan time
-                self.rough_obj['time'] = StringManager.parse_none(
-                    self.rough_obj['time']
+                row['time'] = StringManager.parse_none(
+                    row['time']
                 )
 
-            date_str = self.rough_obj["date"]
-            if self.rough_obj["time"] is not None:
-                date_str += f" {self.rough_obj['time']}"
+            date_str = row["date"]
+            if row["time"] is not None:
+                date_str += f" {row['time']}"
             d = pd.to_datetime(date_str)
 
         elif 'date' in keys:
-            d = pd.to_datetime(self.rough_obj['date'])
+            d = pd.to_datetime(row['date'])
 
         # Handle gpr data dates
         elif 'utcyear' in keys and 'utcdoy' in keys and 'utctod' in keys:
             base = pd.to_datetime(
-                '{:d}-01-01 00:00:00 '.format(int(self.rough_obj['utcyear'])),
+                '{:d}-01-01 00:00:00 '.format(int(row['utcyear'])),
                 utc=True)
 
             # Number of days since january 1
-            d = int(self.rough_obj['utcdoy']) - 1
+            d = int(row['utcdoy']) - 1
 
             # Zulu time (time without colons)
-            time = str(self.rough_obj['utctod'])
+            time = str(row['utctod'])
             hr = int(time[0:2])  # hours
             mm = int(time[2:4])  # minutes
             ss = int(time[4:6])  # seconds
@@ -141,17 +144,22 @@ class MetaDataParser:
 
         else:
             raise ValueError(
-                f'Data is missing date/time info!\n{self.rough_obj}'
+                f'Data is missing date/time info!\n{row}'
             )
         return d
 
     def parse_date_time(self) -> pd.Timestamp:
-        keys = [k.lower() for k in self.rough_obj.keys()]
+        return self.datetime_from_row(
+            self.rough_obj, in_timezone=self._input_timezone
+        )
+
+    @classmethod
+    def datetime_from_row(cls, row, in_timezone=None):
+        keys = [k.lower() for k in row.keys()]
         d = None
-        out_tz = pytz.timezone(self.OUT_TIMEZONE)
+        out_tz = pytz.timezone(cls.OUT_TIMEZONE)
         # Convert timezones if it is provided
         # this variable gets rewritten later
-        in_timezone = self._input_timezone
         if in_timezone is not None:
             in_tz = pytz.timezone(in_timezone)
         # Otherwise assume incoming data is the same timezone
@@ -163,13 +171,13 @@ class MetaDataParser:
         for k in keys:
             kl = k.lower()
             if 'date' in kl and 'time' in kl:
-                str_date = str(self.rough_obj[k].replace('T', '-'))
+                str_date = str(row[k].replace('T', '-'))
                 d = pd.to_datetime(str_date)
                 break
 
         # If we didn't find date/time combined.
         if d is None:
-            d = self._handle_separate_datetime(keys, out_tz)
+            d = self._handle_separate_datetime(row, keys, out_tz)
 
         if in_timezone is not None:
             d = d.tz_localize(in_tz)
@@ -178,23 +186,24 @@ class MetaDataParser:
         else:
             d.replace(tzinfo=out_tz)
 
-        self.rough_obj['date'] = d.date()
+        row['date'] = d.date()
 
         # Don't add time to a time that was nan or none
-        if 'time' not in self.rough_obj.keys():
-            self.rough_obj['time'] = d.timetz()
+        if 'time' not in row.keys():
+            row['time'] = d.timetz()
         else:
-            if self.rough_obj['time'] is not None:
-                self.rough_obj['time'] = d.timetz()
+            if row['time'] is not None:
+                row['time'] = d.timetz()
 
-        dt_str = self.rough_obj["date"].isoformat()
-        if self.rough_obj.get("time"):
-            dt_str += f"T{self.rough_obj['time'].isoformat()}"
+        dt_str = row["date"].isoformat()
+        if row.get("time"):
+            dt_str += f"T{row['time'].isoformat()}"
         dt = pd.to_datetime(dt_str)
 
         return dt
 
-    def _parse_location_from_raw(self):
+    @classmethod
+    def _parse_location_from_raw(cls, row):
         """
         Initial parse of lat, lon, easting, northing from
         the rough object
@@ -203,7 +212,7 @@ class MetaDataParser:
         lon = None
         easting = None
         northing = None
-        for k, v in self.rough_obj.items():
+        for k, v in items():
             if k in self.LAT_NAMES:
                 lat = float(v)
             elif k in self.LON_NAMES:
@@ -215,25 +224,27 @@ class MetaDataParser:
 
         return lat, lon, easting, northing
 
-    def lat_lon_from_easting_northing(self, easting, northing):
-        zone_number = self.parse_utm_epsg()
+    @classmethod
+    def lat_lon_from_easting_northing(cls, row, easting, northing):
+        zone_number = cls.utm_epsg_from_row(row)
         if isinstance(zone_number, str):
             raise RuntimeError(
-                f"{zone_number} should be an integer: {self._fname}"
+                f"{zone_number} should be an integer"
             )
         # Get the last two digits
         zone_number = int(str(zone_number)[-2:])
         try:
             lat, lon = utm.to_latlon(
                 float(easting), float(northing), int(zone_number),
-                northern=self.NORTHERN_HEMISPHERE)
+                northern=cls.NORTHERN_HEMISPHERE)
         except Exception as e:
             LOG.error(e)
             raise RuntimeError(f"Failed with {easting}, {northing}")
 
         return lat, lon
 
-    def _parse_location(self):
+    @classmethod
+    def parse_location_from_row(cls, row):
         """
         Parse the lat and lon from the rough input object
         Also parse the easting and northing
@@ -246,16 +257,16 @@ class MetaDataParser:
 
         returns lat, lon, easting, northing
         """
-        lat, lon, easting, northing = self._parse_location_from_raw()
+        lat, lon, easting, northing = self._parse_location_from_raw(row)
 
         # Do nothing first
         if lat and lon:
             LOG.info("Latitude and Longitude parsed from the file")
         elif easting and northing:
-            lat, lon = self.lat_lon_from_easting_northing(easting, northing)
+            lat, lon = cls.lat_lon_from_easting_northing(easting, northing)
         else:
             raise ValueError(
-                f"Could not parse location from {self.rough_obj}"
+                f"Could not parse location from {row}"
             )
         return lat, lon, easting, northing
 
@@ -266,25 +277,37 @@ class MetaDataParser:
         return self.lat_lon_easting_northing[1]
 
     def parse_utm_epsg(self) -> int:
-        info = self.rough_obj
+        return self.utm_epsg_from_row(self.rough_obj)
+
+    @classmethod
+    def utm_epsg_from_row(cls, row):
         epsg = None
-        if 'utm_zone' in info.keys():
+        if 'utm_zone' in row.keys():
             utm_zone = int(
-                ''.join([c for c in info['utm_zone'] if c.isnumeric()]))
+                ''.join([c for c in row['utm_zone'] if c.isnumeric()]))
             epsg = int(f"{self.UTM_EPSG_PREFIX}{utm_zone}")
         elif 'epsg' in info.keys():
             epsg = info["epsg"]
         # TODO: row based utm?
         return epsg
 
+    @classmethod
+    def parse_campaign_from_row(cls, row):
+        for k, v in self.row.items():
+            if k in self.SITE_NAME_NAMES:
+                return v
+        return None
+
     def parse_campaign_name(self) -> str:
         if self._campaign_name is not None:
             return self._campaign_name
-        for k, v in self.rough_obj.items():
-            if k in self.SITE_NAME_NAMES:
-                return v
-
-        raise RuntimeError(f"Failed to parse Site Name from {self.rough_obj}")
+        else:
+            campaign_name = self.parse_campaign_from_row(self.rough_obj)
+            if campaign_name is None:
+                raise RuntimeError(
+                    f"Failed to parse Site Name from {self.rough_obj}"
+                )
+            return campaign_name
 
     def parse_flags(self):
         result = None
@@ -295,16 +318,18 @@ class MetaDataParser:
 
         return result
 
-    def parse_observers(self) -> List[str]:
+    def observers_from_row(self, row):
         result = None
-        for k, v in self.rough_obj.items():
+        for k, v in row.items():
             if k in ["observers"]:
                 entry = v
                 result = entry.split(", ")
                 result = [r.strip() for r in result]
                 break
-
         return result
+
+    def parse_observers(self) -> List[str]:
+        return self.observers_from_row(self.rough_obj)
 
     def _preparse_meta(self, meta_lines):
         """
