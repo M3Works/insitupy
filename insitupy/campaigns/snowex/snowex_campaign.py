@@ -20,7 +20,6 @@ class SnowExMetadataParser(MetaDataParser):
 class SnowExProfileData(ProfileData):
     META_PARSER = SnowExMetadataParser
 
-
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
         """

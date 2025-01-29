@@ -9,7 +9,7 @@ class SnowExMetadataVariables(BaseMetadataVariables):
     """
     TOTAL_DEPTH = MeasurementDescription(
         'total_depth', "Total depth of measurement",
-        ['total_snow_depth'], auto_remap=True
+        ['total_snow_depth', 'hs'], auto_remap=True
     )
     LATITUDE = MeasurementDescription(
         'latitude', "Latitude",

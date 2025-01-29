@@ -72,7 +72,7 @@ class MetaDataParser:
     @property
     def lat_lon_easting_northing(self):
         if self._lat_lon_easting_northing is None:
-            self._lat_lon_easting_northing = self._parse_location(
+            self._lat_lon_easting_northing = self.parse_location_from_row(
                 self.rough_obj
             )
         return self._lat_lon_easting_northing
@@ -285,7 +285,7 @@ class MetaDataParser:
         if 'utm_zone' in row.keys():
             utm_zone = int(
                 ''.join([c for c in row['utm_zone'] if c.isnumeric()]))
-            epsg = int(f"{self.UTM_EPSG_PREFIX}{utm_zone}")
+            epsg = int(f"{cls.UTM_EPSG_PREFIX}{utm_zone}")
         elif 'epsg' in info.keys():
             epsg = info["epsg"]
         # TODO: row based utm?
@@ -477,9 +477,12 @@ class MetaDataParser:
        """
         filename = filename or self._fname
         filename = str(filename)
-        with open(filename, encoding='latin') as fp:
-            lines = fp.readlines()
-            fp.close()
+        try:
+            with open(filename, "r", encoding="utf-8-sig") as f:
+                lines = f.readlines()
+        except UnicodeDecodeError:
+            with open(filename, "r", encoding="latin1") as f:
+                lines = f.readlines()
 
         # Site description files have no need for column lists
         if 'site' in filename.lower():

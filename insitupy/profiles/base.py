@@ -199,12 +199,12 @@ class ProfileData(MeasurementData):
         self._lower_depth_layer = self.depth_columns()[1]
         # List of measurements to keep
         self._measurements_to_keep = (
-            self.shared_column_options() + [self.variable]
+            self.shared_column_options() + [variable]
         )
         self._id = metadata.site_name
         self._dt = metadata.date_time
         # Init the measurment class
-        super(ProfileData).__init__(
+        super().__init__(
             input_df, metadata, variable,
             original_file=original_file, units_map=units_map,
             allow_map_failure=allow_map_failure
