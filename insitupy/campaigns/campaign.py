@@ -148,7 +148,8 @@ class ProfileDataCollection:
         # parse mlutiple files and create an iterable of ProfileData
         meta_parser = cls.META_PARSER(
             fname, timezone, header_sep=header_sep, _id=site_id,
-            campaign_name=campaign_name, allow_map_failures=allow_map_failure
+            campaign_name=campaign_name, allow_map_failures=allow_map_failure,
+            allow_split_lines=True
         )
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()

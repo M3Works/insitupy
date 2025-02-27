@@ -41,8 +41,7 @@ class BasePrimaryVariables(ExtendableVariables):
     DENSITY = MeasurementDescription(
         "density", "measured snow density",
         [
-            "density", "avg_density",
-            "avgdensity", 'density_mean'
+            "density", 'density_mean'
         ], auto_remap=True
     )
     LAYER_THICKNESS = MeasurementDescription(
