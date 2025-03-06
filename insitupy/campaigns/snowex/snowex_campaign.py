@@ -5,7 +5,6 @@ from pathlib import Path
 
 from insitupy.io.metadata import MetaDataParser
 from . import SnowExMetadataVariables, SnowExPrimaryVariables
-from insitupy.variables import MeasurementDescription
 from insitupy.profiles.base import ProfileData, standardize_depth
 
 

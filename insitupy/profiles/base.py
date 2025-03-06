@@ -6,7 +6,7 @@ import geopandas as gpd
 
 from insitupy.io.metadata import MetaDataParser
 from .metadata import ProfileMetaData
-from insitupy.variables import MeasurementDescription, ExtendableVariables
+from insitupy.variables import MeasurementDescription
 
 
 LOG = logging.getLogger(__name__)
