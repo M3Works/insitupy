@@ -286,8 +286,8 @@ class MetaDataParser:
             utm_zone = int(
                 ''.join([c for c in row['utm_zone'] if c.isnumeric()]))
             epsg = int(f"{cls.UTM_EPSG_PREFIX}{utm_zone}")
-        elif 'epsg' in info.keys():
-            epsg = info["epsg"]
+        elif 'epsg' in row.keys():
+            epsg = row["epsg"]
         # TODO: row based utm?
         return epsg
 
