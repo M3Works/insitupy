@@ -263,7 +263,7 @@ class MetaDataParser:
         if lat and lon:
             LOG.info("Latitude and Longitude parsed from the file")
         elif easting and northing:
-            lat, lon = cls.lat_lon_from_easting_northing(easting, northing)
+            lat, lon = cls.lat_lon_from_easting_northing(row, easting, northing)
         else:
             raise ValueError(
                 f"Could not parse location from {row}"
