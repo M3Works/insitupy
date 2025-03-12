@@ -180,8 +180,11 @@ class MetaDataParser:
             d = cls._handle_separate_datetime(row, keys, out_tz)
 
         if in_timezone is not None:
-            d = d.tz_localize(in_tz)
-            d = d.astimezone(out_tz)
+            if d.tz is not None and d.tz.zone == in_tz.zone:
+                pass
+            else:
+                d = d.tz_localize(in_tz)
+                d = d.astimezone(out_tz)
 
         else:
             d.replace(tzinfo=out_tz)
