@@ -14,5 +14,3 @@ INSTRUMENT:
   - measurement_tool
   - instrument
   match_on_code: true
-to_dict: {}
-to_yaml: {}

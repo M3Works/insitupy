@@ -42,6 +42,7 @@ setup(
     license="MIT license",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
+    package_data={'insitupy': ['variables/*.yaml', 'campaigns/snowex/*.yaml']},
     keywords='insitupy',
     name='insitupy',
     packages=find_packages(include=['insitupy', 'insitupy.*']),

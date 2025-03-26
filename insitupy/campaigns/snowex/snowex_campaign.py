@@ -2,22 +2,23 @@ import logging
 
 import pandas as pd
 from pathlib import Path
-
-from insitupy.io.metadata import MetaDataParser
-from . import SnowExMetadataVariables, SnowExPrimaryVariables
 from insitupy.profiles.base import ProfileData, standardize_depth
-
+from insitupy.variables import base_metadata_variables_yaml, \
+    base_primary_variables_yaml
+from .variables import (
+    primary_variables_yaml, metadata_variables_yaml
+)
 
 LOG = logging.getLogger(__name__)
 
 
-class SnowExMetadataParser(MetaDataParser):
-    METADATA_VARIABLE_CLASS = SnowExMetadataVariables
-    PRIMARY_VARIABLES_CLASS = SnowExPrimaryVariables
-
-
 class SnowExProfileData(ProfileData):
-    META_PARSER = SnowExMetadataParser
+    DEFAULT_METADATA_VARIABLE_FILES = [
+        base_metadata_variables_yaml, metadata_variables_yaml
+    ]
+    DEFAULT_PRIMARY_VARIABLE_FILES = [
+        base_primary_variables_yaml, primary_variables_yaml
+    ]
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):

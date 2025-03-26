@@ -71,9 +71,8 @@ class ExtendableVariables:
     def __len__(self):
         return len(self.entries)
 
-    @classmethod
     def from_mapping(
-        cls, input_name, allow_failure=False
+        self, input_name, allow_failure=False
     ) -> Tuple[str, Dict[str, MeasurementDescription]]:
         """
         Get the measurement description from an input name.
@@ -92,7 +91,7 @@ class ExtendableVariables:
         result = None
         # Map column name to variable type
         column_mapping = {}
-        for entry in cls():
+        for entry in self.variables:
             # Check if we match directly on the code
             code_match = entry.match_on_code and lower_name == entry.code
             # Check if we match from the list of possible matches

@@ -6,8 +6,10 @@ import geopandas as gpd
 
 from insitupy.io.metadata import MetaDataParser
 from .metadata import ProfileMetaData
-from insitupy.variables import MeasurementDescription
-
+from insitupy.variables import (
+    MeasurementDescription, ExtendableVariables, base_primary_variables_yaml,
+    base_metadata_variables_yaml
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -139,7 +141,8 @@ class MeasurementData:
     @classmethod
     def from_csv(
         cls, fname, variable: MeasurementDescription, timezone="US/Mountain",
-        allow_map_failures=False
+        allow_map_failures=False, metadata_variable_files=None,
+        primary_variable_files=None
     ):
         """
         Args:
@@ -147,11 +150,20 @@ class MeasurementData:
             variable: variable in the file
             timezone: local timezone for file
             allow_map_failures: allow metadata and column unknowns
+            metadata_variable_files: list of yaml files with metadata variables
+            primary_variable_files: list of yaml files with primary variables
         Returns:
             the instantiated class
         """
+        primary_variable_files = primary_variable_files or \
+            [base_primary_variables_yaml]
+        metadata_variable_files = metadata_variable_files or \
+            [base_metadata_variables_yaml]
         meta_parser = cls.META_PARSER(
-            fname, timezone, allow_map_failures=allow_map_failures
+            fname, timezone,
+            ExtendableVariables(entries=primary_variable_files),
+            ExtendableVariables(entries=metadata_variable_files),
+            allow_map_failures=allow_map_failures
         )
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()

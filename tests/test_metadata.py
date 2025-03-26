@@ -1,8 +1,10 @@
 import pandas as pd
 import pytest
 
-from insitupy.campaigns.snowex import SnowExMetadataParser
-
+from insitupy.campaigns.snowex import primary_variables_yaml, metadata_variables_yaml
+from insitupy.variables import base_metadata_variables_yaml, base_primary_variables_yaml
+from insitupy.variables import ExtendableVariables
+from insitupy.io.metadata import MetaDataParser
 
 @pytest.mark.parametrize(
     "fname", [
@@ -20,8 +22,14 @@ class TestSnowexPitMetadata:
     @pytest.fixture
     def metadata_info(self, fname, data_path):
         # This is the parser object
-        obj = SnowExMetadataParser(
+        obj = MetaDataParser(
             data_path.joinpath(fname), "US/Mountain",
+            ExtendableVariables(
+                [base_primary_variables_yaml, primary_variables_yaml]
+            ),
+            ExtendableVariables(
+                [base_metadata_variables_yaml, metadata_variables_yaml]
+            ),
             allow_map_failures=True
         )
         metadata, columns, column_mapping, header_pos = obj.parse()
@@ -84,8 +92,14 @@ def test_columns(fname, expected_cols, data_path):
     """
     Test the columns we expect to pass back from the file
     """
-    obj = SnowExMetadataParser(
+    obj = MetaDataParser(
         data_path.joinpath(fname), "US/Mountain",
+        ExtendableVariables(
+            [base_primary_variables_yaml, primary_variables_yaml]
+        ),
+        ExtendableVariables(
+            [base_metadata_variables_yaml, metadata_variables_yaml]
+        ),
         allow_map_failures=True
     )
     metadata, columns, column_mapping, header_pos = obj.parse()

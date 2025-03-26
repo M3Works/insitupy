@@ -7,7 +7,10 @@ from typing import List
 import pandas as pd
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
-from insitupy.variables import MeasurementDescription
+from insitupy.variables import (
+    MeasurementDescription, base_primary_variables_yaml,
+    base_metadata_variables_yaml, ExtendableVariables
+)
 
 
 SOURCES = [
@@ -34,6 +37,8 @@ class ProfileDataCollection:
     """
     META_PARSER = MetaDataParser
     PROFILE_DATA_CLASS = ProfileData
+    DEFAULT_METADATA_VARIABLE_FILES = [base_metadata_variables_yaml]
+    DEFAULT_PRIMARY_VARIABLE_FILES = [base_primary_variables_yaml]
 
     def __init__(self, profiles: List[ProfileData], metadata: ProfileMetaData):
         self._profiles = profiles
@@ -129,7 +134,8 @@ class ProfileDataCollection:
     @classmethod
     def from_csv(
         cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
-        campaign_name=None, allow_map_failure=False
+        campaign_name=None, allow_map_failure=False,
+        metadata_variable_files=None, primary_variable_files=None
     ):
         """
         Find all profiles in a single csv file
@@ -140,14 +146,25 @@ class ProfileDataCollection:
             site_id: Site id override for the metadata
             campaign_name: Campaign.name override for the metadata
             allow_map_failure: allow metadata and column unknowns
-
+            metadata_variable_files: list of yaml files with metadata
+                variables. Overrides happen sequentially, last file preferred
+            primary_variable_files: list of yaml files with primary variables.
+                Overrides happen sequentially, last file preferred
         Returns:
             This class with a collection of profiles and metadata
         """
         # TODO: timezone here (mapped from site?)
         # parse mlutiple files and create an iterable of ProfileData
+        primary_variable_files = primary_variable_files or \
+            [cls.DEFAULT_PRIMARY_VARIABLE_FILES]
+        metadata_variable_files = metadata_variable_files or \
+            [cls.DEFAULT_METADATA_VARIABLE_FILES]
+
         meta_parser = cls.META_PARSER(
-            fname, timezone, header_sep=header_sep, _id=site_id,
+            fname, timezone,
+            ExtendableVariables(entries=primary_variable_files),
+            ExtendableVariables(entries=metadata_variable_files),
+            header_sep=header_sep, _id=site_id,
             campaign_name=campaign_name, allow_map_failures=allow_map_failure,
             allow_split_lines=True
         )

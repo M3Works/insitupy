@@ -1,8 +1,6 @@
-from .metadata_variables import SnowExMetadataVariables
-from .primary_variables import SnowExPrimaryVariables
-from .snowex_campaign import SnowExProfileData, SnowExMetadataParser
+from .snowex_campaign import SnowExProfileData
+from .variables import primary_variables_yaml, metadata_variables_yaml
 
 __all__ = [
-    "SnowExProfileData", "SnowExMetadataParser", "SnowExMetadataVariables",
-    "SnowExPrimaryVariables"
+    "primary_variables_yaml", "metadata_variables_yaml", "SnowExProfileData"
 ]
