@@ -1,0 +1,18 @@
+EQUIVALENT_DIAMETER:
+  auto_remap: true
+  code: equivalent_diameter
+  description: ''
+  map_from:
+  - deq
+  match_on_code: true
+INSTRUMENT:
+  auto_remap: true
+  code: instrument
+  description: Instrument of measurement
+  map_from:
+  - smp_serial_number
+  - measurement_tool
+  - instrument
+  match_on_code: true
+to_dict: {}
+to_yaml: {}
