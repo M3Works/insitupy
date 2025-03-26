@@ -1,19 +1,21 @@
 import inspect
 import logging
+import os.path
 from dataclasses import dataclass
 from typing import List, Tuple, Dict
-
+import attrs
+import pydash
+import yaml
 
 LOG = logging.getLogger(__name__)
 
 
 # Similar to MeasurementDescription from metloom
-@dataclass(eq=True, frozen=True)
+@attrs.frozen
 class MeasurementDescription:
     """
     data class for describing a measurement
     """
-
     code: str = "-1"  # code used within the applicable API
     description: str = None  # description of the sensor
     map_from: List = None  # map to this variable from a list of options
@@ -22,54 +24,45 @@ class MeasurementDescription:
     cast_type = None   # make this float, int, etc
 
 
+def variable_from_input(x):
+    """
+    Get all the variables from a set of files
+    Args:
+        x: input
+
+    Returns:
+        list of variables
+    """
+    if isinstance(x, list) and all(os.path.isfile(f) for f in x):
+        data_final = {}
+        # If we have a list of files, we need to import them
+        for f in x:
+            with open(f) as fp:
+                data = yaml.safe_load(fp)
+            # Merge, overwriting options with second
+            pydash.merge(data_final, data)
+        return {k: MeasurementDescription(**v) for k, v in data_final.items()}
+    # Assume properly formatted list
+    return x
+
+
+@attrs.define
 class ExtendableVariables:
     """
-    Make a class with the helpful iterator portion of enums, but
-    that is fully extendable
+    Make a class with the helpful iterator for storing variable options
     """
-    def __init__(self, entries=None):
-        self._entries = None
-        # allows filtering to a desired list
-        self._initial_entries = entries or self._all_variables
-
-    @property
-    def entries(self):
-        if self._entries is None:
-            self._entries = self._get_members()
-        return self._entries
-
-    @property
-    def _all_variables(self):
-        return [m[1] for m in self.entries]
+    entries: dict[str, MeasurementDescription] = attrs.field(
+        factory=dict,
+        converter=attrs.Converter(variable_from_input)
+    )
 
     @property
     def variables(self):
-        return [m[1] for m in self.entries if m[1] in self._initial_entries]
+        return list(self.entries.values())
 
     @property
-    def names(self):
-        return [m[0] for m in self.entries if m[1] in self._initial_entries]
-
-    @classmethod
-    def _get_members(cls):
-        """
-        https://www.geeksforgeeks.org/how-to-get-a-list-of-class-attributes-in-python/
-        Important this is a class method or seg faults
-        """
-        result = []
-        # getmembers() returns all the
-        # members of an object
-        for i in inspect.getmembers(cls):
-
-            # to remove private and protected
-            # functions
-            if not i[0].startswith('_'):
-
-                # To remove other methods that
-                # doesnot start with a underscore
-                if not inspect.ismethod(i[1]) and not isinstance(i[1], property):
-                    result.append(i)
-        return result
+    def keys(self):
+        return list(self.entries.keys())
 
     def __iter__(self):
         for item in self.variables:
@@ -125,3 +118,11 @@ class ExtendableVariables:
             f"Mapping {result} to {result} (type {column_mapping[result]})"
         )
         return result, column_mapping
+
+    def to_dict(self):
+        return {k: attrs.asdict(v) for k, v in self.entries.items()}
+
+    def to_yaml(self, output_file):
+        with open(output_file, 'w') as fp:
+            data = self.to_dict()
+            yaml.dump(data, fp)
