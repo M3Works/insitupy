@@ -156,9 +156,9 @@ class ProfileDataCollection:
         # TODO: timezone here (mapped from site?)
         # parse mlutiple files and create an iterable of ProfileData
         primary_variable_files = primary_variable_files or \
-            [cls.DEFAULT_PRIMARY_VARIABLE_FILES]
+            cls.DEFAULT_PRIMARY_VARIABLE_FILES
         metadata_variable_files = metadata_variable_files or \
-            [cls.DEFAULT_METADATA_VARIABLE_FILES]
+            cls.DEFAULT_METADATA_VARIABLE_FILES
 
         meta_parser = cls.META_PARSER(
             fname, timezone,

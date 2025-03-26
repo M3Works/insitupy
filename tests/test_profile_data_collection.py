@@ -1,13 +1,14 @@
 import pytest
 import numpy as np
 
-from insitupy.variables import BasePrimaryVariables
+from insitupy.variables import base_primary_variables_yaml, ExtendableVariables
 from insitupy.campaigns import ProfileDataCollection
-from insitupy.campaigns.snowex import SnowExMetadataParser, SnowExProfileData
+from insitupy.campaigns.snowex import SnowExProfileData
 
+
+BASE_PRIMARY_VARIABLES = ExtendableVariables([base_primary_variables_yaml])
 
 class DataCollectionExtended(ProfileDataCollection):
-    META_PARSER = SnowExMetadataParser
     PROFILE_DATA_CLASS = SnowExProfileData
 
 
@@ -15,23 +16,24 @@ class DataCollectionExtended(ProfileDataCollection):
     "fname, expected_variables, expected_means", [
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv",
-            [BasePrimaryVariables.SNOW_TEMPERATURE], [0.0]
+            [BASE_PRIMARY_VARIABLES.entries["SNOW_TEMPERATURE"]], [0.0]
         ),
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
             [
-                BasePrimaryVariables.DENSITY,
-                BasePrimaryVariables.PERMITTIVITY_A,
-                BasePrimaryVariables.PERMITTIVITY_B,
-                BasePrimaryVariables.LWC_A,
-                BasePrimaryVariables.LWC_B,
+                BASE_PRIMARY_VARIABLES.entries["DENSITY"],
+                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_A"],
+                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_B"],
+                BASE_PRIMARY_VARIABLES.entries["LWC_A"],
+                BASE_PRIMARY_VARIABLES.entries["LWC_B"],
             ], [395.03703703703707, np.nan, np.nan, np.nan, np.nan]
         ),
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
             [
-                BasePrimaryVariables.DENSITY_A, BasePrimaryVariables.DENSITY_B,
-                BasePrimaryVariables.DENSITY_C
+                BASE_PRIMARY_VARIABLES.entries["DENSITY_A"],
+                BASE_PRIMARY_VARIABLES.entries["DENSITY_B"],
+                BASE_PRIMARY_VARIABLES.entries["DENSITY_C"]
             ],
             [397.8888888, 394.5555556, 137.1111111]
         ),
