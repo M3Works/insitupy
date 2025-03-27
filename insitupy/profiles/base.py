@@ -19,13 +19,12 @@ class MeasurementData:
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
-    META_PARSER = MetaDataParser
 
     def __init__(
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
         variable: MeasurementDescription,
+        meta_parser: MetaDataParser,
         original_file=None,
-        units_map=None,
         allow_map_failure=False
     ):
         """
@@ -35,14 +34,16 @@ class MeasurementData:
                 Should include depth and optional bottom depth
                 Should include sample or sample_a, sample_b, etc
             metadata: ProfileMetaData object
+            meta_parser: MetaDataParser object. This will hold our variables
+                map and units map
             variable: description of variable
             original_file: optional track original file
-            units_map: optional dictionary of column name to unit
             allow_map_failures: if a mapping fails, warn us and use the
                 original string (default False)
 
         """
-        self._units_map = units_map
+        self._meta_parser = meta_parser
+        self._units_map = meta_parser.units_map
         self._original_file = original_file
         self._metadata = metadata
         self._allow_map_failure = allow_map_failure
@@ -175,7 +176,7 @@ class MeasurementData:
         else:
             data = cls.read_csv_dataframe(fname, columns, header_pos)
 
-        return cls(data, metadata, variable, meta_parser.units_map)
+        return cls(data, metadata, variable, meta_parser)
 
 
 class ProfileData(MeasurementData):
@@ -183,13 +184,12 @@ class ProfileData(MeasurementData):
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
-    META_PARSER = MetaDataParser
 
     def __init__(
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
         variable: MeasurementDescription,
+        meta_parser: MetaDataParser,
         original_file=None,
-        units_map=None,
         allow_map_failure=False
     ):
         """
@@ -199,6 +199,8 @@ class ProfileData(MeasurementData):
                 Should include depth and optional bottom depth
                 Should include sample or sample_a, sample_b, etc
             metadata: ProfileMetaData object
+            meta_parser: MetaDataParser object. This will hold our variables
+                map and units map
             variable: description of variable
             original_file: optional track original file
             units_map: optional dictionary of column name to unit
@@ -206,9 +208,13 @@ class ProfileData(MeasurementData):
                 original string (default False)
 
         """
-
-        self._depth_layer = self.depth_columns()[0]
-        self._lower_depth_layer = self.depth_columns()[1]
+        # These are our default shared columns
+        self._depth_columns = [
+            meta_parser.primary_variables.entries["DEPTH"],
+            meta_parser.primary_variables.entries["BOTTOM_DEPTH"]
+        ]
+        self._depth_layer = self._depth_columns[0]
+        self._lower_depth_layer = self._depth_columns[1]
         # List of measurements to keep
         self._measurements_to_keep = (
             self.shared_column_options() + [variable]
@@ -218,7 +224,8 @@ class ProfileData(MeasurementData):
         # Init the measurment class
         super().__init__(
             input_df, metadata, variable,
-            original_file=original_file, units_map=units_map,
+            meta_parser,
+            original_file=original_file,
             allow_map_failure=allow_map_failure
         )
         columns = self._df.columns.values
@@ -240,16 +247,8 @@ class ProfileData(MeasurementData):
         # Extend the df info
         self._add_thickness_to_df()
 
-    @classmethod
-    def depth_columns(cls):
-        return [
-            cls.META_PARSER.PRIMARY_VARIABLES_CLASS.DEPTH,
-            cls.META_PARSER.PRIMARY_VARIABLES_CLASS.BOTTOM_DEPTH
-        ]
-
-    @classmethod
-    def shared_column_options(cls):
-        return cls.depth_columns()
+    def shared_column_options(self):
+        return self._depth_columns
 
     def _format_df(self, input_df):
         """

@@ -60,8 +60,8 @@ class MetaDataParser:
         self._campaign_name = campaign_name
         self._units_map = units_map or {}
 
-        self._primary_variables = primary_variables
-        self._metadata_variables = metadata_variables
+        self.primary_variables = primary_variables
+        self.metadata_variables = metadata_variables
 
         self._allow_split_header_lines = allow_split_lines
         self._allow_map_failures = allow_map_failures
@@ -361,7 +361,7 @@ class MetaDataParser:
                 value = StringManager.clean_str(value)
 
             # cast the rough object key to a known key
-            known_name, k_mapping = self._metadata_variables.from_mapping(
+            known_name, k_mapping = self.metadata_variables.from_mapping(
                 k, allow_failure=self._allow_map_failures
             )
 
@@ -453,7 +453,7 @@ class MetaDataParser:
         inferred_units_map = {}
         # Iterate through the columns and map to desired result
         for c, unit in zip(standard_cols, infered_units):
-            mapped_col, col_map = self._primary_variables.from_mapping(
+            mapped_col, col_map = self.primary_variables.from_mapping(
                 c, allow_failure=self._allow_map_failures
             )
             # Store the list of columns to use when reading in the

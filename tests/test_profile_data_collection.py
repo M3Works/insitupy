@@ -1,12 +1,10 @@
 import pytest
 import numpy as np
 
-from insitupy.variables import base_primary_variables_yaml, ExtendableVariables
 from insitupy.campaigns import ProfileDataCollection
 from insitupy.campaigns.snowex import SnowExProfileData
+from . import BASE_PRIMARY_VARIABLES
 
-
-BASE_PRIMARY_VARIABLES = ExtendableVariables([base_primary_variables_yaml])
 
 class DataCollectionExtended(ProfileDataCollection):
     PROFILE_DATA_CLASS = SnowExProfileData
