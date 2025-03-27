@@ -74,7 +74,9 @@ class ProfileDataCollection:
     @classmethod
     def _read_csv(
         cls, fname, columns, column_mapping, header_pos,
-        metadata: ProfileMetaData, meta_parser: MetaDataParser
+        metadata: ProfileMetaData, meta_parser: MetaDataParser,
+        shared_column_options=None,
+        allow_map_failures=False
     ) -> List[ProfileData]:
         """
         Args:
@@ -84,11 +86,20 @@ class ProfileDataCollection:
             header_pos: skiprows for pd.read_csv
             metadata: metadata for each object
             meta_parser: metadata parser object
+            shared_column_options: shared columns that will be used
+                for data handling and storing. These come from primary variables,
+                but are not the primary data themselves
 
         Returns:
             a list of ProfileData objects
 
         """
+        # columns that will be included in data, but are not the primary
+        # data themselves
+        shared_column_options = shared_column_options or [
+            meta_parser.primary_variables.entries["DEPTH"],
+            meta_parser.primary_variables.entries["BOTTOM_DEPTH"]
+        ]
         result = []
         if columns is None and header_pos is None:
             LOG.warning(f"File {fname} is empty of rows")
@@ -97,25 +108,29 @@ class ProfileDataCollection:
             df = cls.PROFILE_DATA_CLASS.read_csv_dataframe(
                 fname, columns, header_pos
             )
-        # add comments in here for shared columns
-        shared_column_options = cls.PROFILE_DATA_CLASS.shared_column_options()
+        # Filter the shared columns
         shared_columns = [
             c for c, v in column_mapping.items()
             if v in shared_column_options
         ]
+        # Variable columns are the remaining
         variable_columns = [
             c for c in column_mapping.keys() if c not in shared_columns
         ]
 
         # Create an object for each measurement
         for column in variable_columns:
-            target_df = df.loc[:, shared_columns + [column]]
-            result.append(cls.PROFILE_DATA_CLASS(
-                target_df, metadata,
-                column_mapping[column],  # variable is a MeasurementDescription
-                meta_parser,
-                original_file=fname,
-            ))
+            # Skip columns that are not mapped
+            if column_mapping[column] is None:
+                LOG.debug(f"Skipping column {column} because it is not mapped")
+            else:
+                target_df = df.loc[:, shared_columns + [column]]
+                result.append(cls.PROFILE_DATA_CLASS(
+                    target_df, metadata,
+                    column_mapping[column],  # variable is a MeasurementDescription
+                    meta_parser,
+                    original_file=fname, allow_map_failure=allow_map_failures
+                ))
         if not result and df.empty:
             # Add one profile if this is empty so we can
             # keep the metadata
@@ -172,7 +187,7 @@ class ProfileDataCollection:
         # read in the actual data
         profiles = cls._read_csv(
             fname, columns, columns_map, header_pos, metadata,
-            meta_parser
+            meta_parser, allow_map_failures=allow_map_failure
         )
 
         # ignore profiles with the name 'ignore'

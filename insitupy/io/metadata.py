@@ -462,7 +462,16 @@ class MetaDataParser:
             # Store the map of column name to the known variable
             final_col_map = {**final_col_map, **col_map}
             # Store the map of column name to inferred unit
-            inferred_units_map[col_map[mapped_col].code] = unit
+            result_obj = col_map[mapped_col]
+            if result_obj is None:
+                if self._allow_map_failures:
+                    LOG.warning(f"No unit for {c}")
+                else:
+                    raise RuntimeError(
+                        f"No unit for {c} - column mapping has failed"
+                    )
+            else:
+                inferred_units_map[result_obj.code] = unit
 
         return final_cols, final_col_map, inferred_units_map
 

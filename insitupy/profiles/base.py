@@ -19,6 +19,12 @@ class MeasurementData:
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
+    DEFAULT_METADATA_VARIABLE_FILES = [
+        base_metadata_variables_yaml
+    ]
+    DEFAULT_PRIMARY_VARIABLE_FILES = [
+        base_primary_variables_yaml
+    ]
 
     def __init__(
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
@@ -157,9 +163,9 @@ class MeasurementData:
             the instantiated class
         """
         primary_variable_files = primary_variable_files or \
-            [base_primary_variables_yaml]
+            cls.DEFAULT_PRIMARY_VARIABLE_FILES
         metadata_variable_files = metadata_variable_files or \
-            [base_metadata_variables_yaml]
+            cls.DEFAULT_METADATA_VARIABLE_FILES
         meta_parser = MetaDataParser(
             fname, timezone,
             ExtendableVariables(entries=primary_variable_files),

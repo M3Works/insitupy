@@ -19,12 +19,11 @@ class DataCollectionExtended(ProfileDataCollection):
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
             [
-                BASE_PRIMARY_VARIABLES.entries["DENSITY"],
                 BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_A"],
                 BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_B"],
                 BASE_PRIMARY_VARIABLES.entries["LWC_A"],
                 BASE_PRIMARY_VARIABLES.entries["LWC_B"],
-            ], [395.03703703703707, np.nan, np.nan, np.nan, np.nan]
+            ], [np.nan, np.nan, np.nan, np.nan]
         ),
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
