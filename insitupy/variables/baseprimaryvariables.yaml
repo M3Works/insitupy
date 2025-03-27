@@ -1,0 +1,147 @@
+BOTTOM_DEPTH:
+  auto_remap: true
+  code: bottom_depth
+  description: Lower edge of measurement
+  map_from:
+  - bottom
+  - bottom_depth
+  match_on_code: true
+DENSITY:
+  auto_remap: true
+  code: density
+  description: measured snow density
+  map_from:
+  - density
+  - density_mean
+  match_on_code: true
+DENSITY_A:
+  auto_remap: false
+  code: density
+  description: measured snow density
+  map_from:
+  - density_a
+  match_on_code: false
+DENSITY_B:
+  auto_remap: false
+  code: density
+  description: measured snow density
+  map_from:
+  - density_b
+  match_on_code: false
+DENSITY_C:
+  auto_remap: false
+  code: density
+  description: measured snow density
+  map_from:
+  - density_c
+  match_on_code: false
+DEPTH:
+  auto_remap: true
+  code: depth
+  description: top or center depth of measurement
+  map_from:
+  - depth
+  - top
+  - sample_top_height
+  - hs
+  - depth_m
+  - snowdepthfilter(m)
+  - snowdepthfilter
+  - height
+  match_on_code: true
+GRAIN_SIZE:
+  auto_remap: true
+  code: grain_size
+  description: Grain Size
+  map_from:
+  - grain_size
+  match_on_code: true
+GRAIN_TYPE:
+  auto_remap: true
+  code: grain_type
+  description: Grain Type
+  map_from:
+  - grain_type
+  match_on_code: true
+HAND_HARDNESS:
+  auto_remap: true
+  code: hand_hardness
+  description: Hand Hardness
+  map_from:
+  - hand_hardness
+  match_on_code: true
+LAYER_THICKNESS:
+  auto_remap: true
+  code: layer_thickness
+  description: thickness of layer
+  map_from: null
+  match_on_code: true
+LWC:
+  auto_remap: true
+  code: liquid_water_content
+  description: Liquid water content
+  map_from:
+  - lwc
+  - lwc_vol
+  match_on_code: true
+LWC_A:
+  auto_remap: false
+  code: liquid_water_content
+  description: Liquid water content
+  map_from:
+  - lwc_vol_a
+  match_on_code: false
+LWC_B:
+  auto_remap: false
+  code: liquid_water_content
+  description: Liquid water content
+  map_from:
+  - lwc_vol_b
+  match_on_code: false
+MANUAL_WETNESS:
+  auto_remap: true
+  code: manual_wetness
+  description: Manual Wetness
+  map_from:
+  - manual_wetness
+  match_on_code: true
+PERMITTIVITY:
+  auto_remap: true
+  code: permittivity
+  description: Permittivity
+  map_from:
+  - permittivity
+  - dielectric_constant
+  match_on_code: true
+PERMITTIVITY_A:
+  auto_remap: false
+  code: permittivity
+  description: Permittivity
+  map_from:
+  - permittivity_a
+  - dielectric_constant_a
+  match_on_code: false
+PERMITTIVITY_B:
+  auto_remap: false
+  code: permittivity
+  description: Permittivity
+  map_from:
+  - permittivity_b
+  - dielectric_constant_b
+  match_on_code: false
+SNOW_TEMPERATURE:
+  auto_remap: true
+  code: snow_temperature
+  description: Snowpack Temperature
+  map_from:
+  - temperature
+  - temperature_deg_c
+  match_on_code: true
+SWE:
+  auto_remap: true
+  code: SWE
+  description: Snow Water Equivalent
+  map_from:
+  - swe_mm
+  - swe
+  match_on_code: true

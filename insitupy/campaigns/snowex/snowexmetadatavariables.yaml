@@ -1,0 +1,58 @@
+EASTING:
+  auto_remap: true
+  code: easting
+  description: UTM Easting
+  map_from:
+  - easting
+  - utm_wgs84_easting
+  match_on_code: true
+ELEVATION:
+  auto_remap: true
+  code: elevation
+  description: Elevation
+  map_from:
+  - elev_m
+  - elevation
+  - elevationwgs84
+  match_on_code: true
+LATITUDE:
+  auto_remap: true
+  code: latitude
+  description: Latitude
+  map_from:
+  - lat
+  - latitude
+  match_on_code: true
+LONGITUDE:
+  auto_remap: true
+  code: longitude
+  description: Longitude
+  map_from:
+  - long
+  - lon
+  - longitude
+  match_on_code: true
+NORTHING:
+  auto_remap: true
+  code: northing
+  description: UTM Northing
+  map_from:
+  - northing
+  - utm_wgs84_northing
+  match_on_code: true
+TOTAL_DEPTH:
+  auto_remap: true
+  code: total_depth
+  description: Total depth of measurement
+  map_from:
+  - total_snow_depth
+  - hs
+  match_on_code: true
+UTM_ZONE:
+  auto_remap: true
+  code: utm_zone
+  description: UTM Zone
+  map_from:
+  - utmzone
+  - utm_zone
+  match_on_code: true

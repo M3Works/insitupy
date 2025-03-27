@@ -1,0 +1,57 @@
+DATE:
+  auto_remap: false
+  code: date
+  description: Measurement Date (only date column)
+  map_from:
+  - date_dd_mmm_yy
+  - date
+  match_on_code: true
+DATETIME:
+  auto_remap: true
+  code: datetime
+  description: Combined date and time
+  map_from:
+  - Date/Local Standard Time
+  - date/local_standard_time
+  - datetime
+  - date&time
+  - date/time
+  - date/local_time
+  match_on_code: true
+PIT_ID:
+  auto_remap: true
+  code: pit_id
+  description: ID of snow pit
+  map_from:
+  - pitid
+  match_on_code: true
+SITE_ID:
+  auto_remap: true
+  code: site_id
+  description: ID within campaign site
+  map_from:
+  - site
+  match_on_code: true
+SITE_NAME:
+  auto_remap: true
+  code: site_name
+  description: Name of campaign site
+  map_from:
+  - location
+  match_on_code: true
+TIME:
+  auto_remap: false
+  code: time
+  description: Measurement time
+  map_from:
+  - time_gmt
+  - time
+  match_on_code: true
+TIME_BOUND_PIT:
+  auto_remap: false
+  code: Time start/end
+  description: Time of first or last pit measurement
+  map_from:
+  - Time start/end
+  - time_start/end
+  match_on_code: true
