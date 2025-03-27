@@ -14,3 +14,11 @@ INSTRUMENT:
   - measurement_tool
   - instrument
   match_on_code: true
+IGNORE:
+    auto_remap: true
+    code: ignore
+    description: Ignore this column
+    map_from:
+    - avgdensity
+    - avg_density
+    match_on_code: true

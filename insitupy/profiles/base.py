@@ -69,7 +69,7 @@ class MeasurementData:
         for c in columns:
             # Find the variable associated with each column
             # and store a map
-            cn, cm = self.META_PARSER.PRIMARY_VARIABLES_CLASS.from_mapping(
+            cn, cm = self._meta_parser.primary_variables.from_mapping(
                 c, allow_failure=self._allow_map_failure
             )
             # join with existing mappings
@@ -160,7 +160,7 @@ class MeasurementData:
             [base_primary_variables_yaml]
         metadata_variable_files = metadata_variable_files or \
             [base_metadata_variables_yaml]
-        meta_parser = cls.META_PARSER(
+        meta_parser = MetaDataParser(
             fname, timezone,
             ExtendableVariables(entries=primary_variable_files),
             ExtendableVariables(entries=metadata_variable_files),
@@ -286,7 +286,7 @@ class ProfileData(MeasurementData):
     def _add_thickness_to_df(self):
         # set the thickness of the layer
         if self._has_layers:
-            self._df[self.META_PARSER.PRIMARY_VARIABLES_CLASS.LAYER_THICKNESS.code] = (
+            self._df[self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code] = (
                 self._df[self._depth_layer.code] - self._df[
                     self._lower_depth_layer.code
                 ]
@@ -315,7 +315,7 @@ class ProfileData(MeasurementData):
         if self._has_layers:
             # height weighted mean for these layers
             thickness = self._df[
-                self.META_PARSER.PRIMARY_VARIABLES_CLASS.LAYER_THICKNESS.code
+                self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code
             ]
             # this works for a weighted mean, but is not assumed to be
             # the total thickness of the snowpack
