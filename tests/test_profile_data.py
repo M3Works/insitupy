@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from insitupy.campaigns.snowex import SnowExProfileData
+from insitupy.variables.base_variables import InputMappingError
 from . import BASE_PRIMARY_VARIABLES
 
 
@@ -38,8 +39,12 @@ class TestSnowexPitProfile:
         ]
     )
     def test_read_fails_mapping_error(self, fname, variable, data_path):
+        """
+        Test that we fail to map a column in the column names when
+        we expect them all to be mapped
+        """
         file_path = data_path.joinpath(fname)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(InputMappingError):
             SnowExProfileData.from_csv(
                 file_path, variable, allow_map_failures=False
             )
