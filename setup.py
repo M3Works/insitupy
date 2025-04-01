@@ -16,6 +16,7 @@ requirements = [
     "numpy<2.0",
     "attrs>=24.2.0,<25.0",
     "PyYAML>=6.0.2,<7.0",
+    "pydash>=8.0.5",
 ]
 
 test_requirements = ['pytest>=3', ]

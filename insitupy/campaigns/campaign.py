@@ -37,8 +37,8 @@ class ProfileDataCollection:
     """
     META_PARSER = MetaDataParser
     PROFILE_DATA_CLASS = ProfileData
-    DEFAULT_METADATA_VARIABLE_FILES = [base_metadata_variables_yaml]
-    DEFAULT_PRIMARY_VARIABLE_FILES = [base_primary_variables_yaml]
+    DEFAULT_METADATA_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES
+    DEFAULT_PRIMARY_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
 
     def __init__(self, profiles: List[ProfileData], metadata: ProfileMetaData):
         self._profiles = profiles

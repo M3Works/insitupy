@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 import logging
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 import pytz
@@ -82,7 +82,7 @@ class MetaDataParser:
             )
         return self._lat_lon_easting_northing
 
-    def parse_id(self) -> str:
+    def parse_id(self) -> Union[str, None]:
         if self._id is not None:
             return self._id
         else:
@@ -90,7 +90,7 @@ class MetaDataParser:
                 if k in self.ID_NAMES:
                     return v
 
-        raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
+        return None
 
     @staticmethod
     def _handle_separate_datetime(row, keys, out_tz):
