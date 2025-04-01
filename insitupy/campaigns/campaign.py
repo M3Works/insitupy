@@ -7,10 +7,7 @@ from typing import List
 import pandas as pd
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
-from insitupy.variables import (
-    MeasurementDescription, base_primary_variables_yaml,
-    base_metadata_variables_yaml, ExtendableVariables
-)
+from insitupy.variables import MeasurementDescription, ExtendableVariables
 
 
 SOURCES = [
