@@ -41,8 +41,96 @@ Features
 
 Example
 -------
-See the file....
-# TODO
+I want to read in a file that looks like this:
+
+.. code-block:: csv
+    # Location,East River
+    # Date/Local Standard Time,2020-04-27T08:45
+    # Latitude,38.92524
+    # Longitude,-106.97112
+    # Flags,random flag
+    # Top (cm),Bottom (cm),Density (kg/m3)
+    95.0,85.0,401.0
+    85.0,75.0,449.0
+    75.0,65.0,472.0
+
+I can define a `metadata` file that looks like this:
+.. code-block:: yaml
+    LATITUDE:
+      auto_remap: true
+      code: latitude
+      description: Latitude
+      map_from:
+      - lat
+      - latitude
+      match_on_code: true
+    LONGITUDE:
+      auto_remap: true
+      code: longitude
+      description: Longitude
+      map_from:
+      - long
+      - lon
+      - longitude
+    DATETIME:
+      auto_remap: true
+      code: datetime
+      description: Combined date and time
+      map_from:
+      - Date/Local Standard Time
+      - date/local_standard_time
+      - datetime
+      - date&time
+      - date/time
+      - date/local_time
+      match_on_code: true
+    SITE_NAME:
+      auto_remap: true
+      code: site_name
+      description: Name of campaign site
+      map_from:
+          - location
+  match_on_code: true
+
+and a primary variable file like:
+.. code-block:: yaml
+    BOTTOM_DEPTH:
+      auto_remap: true
+      code: bottom_depth
+      description: Lower edge of measurement
+      map_from:
+      - bottom
+      - bottom_depth
+      match_on_code: true
+    DENSITY:
+      auto_remap: true
+      code: density
+      description: measured snow density
+      map_from:
+      - density
+      - density_mean
+      match_on_code: true
+    DEPTH:
+      auto_remap: true
+      code: depth
+      description: top or center depth of measurement
+      map_from:
+      - depth
+      - top
+      match_on_code: true
+
+Then read in the file like this:
+
+.. code-block:: python
+
+    from insitupy.profiles import ProfileData
+    from insitupy.variables import ExtendableVariables
+    my_vars = ExtendableVariables(["<primary_variables_file>"])
+    my_data = ProfileData(
+
+    )
+    # TODO this
+    # TODO: what columns are required?
 
 
 Variables

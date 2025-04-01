@@ -453,6 +453,7 @@ class MetaDataParser:
         inferred_units_map = {}
         # Iterate through the columns and map to desired result
         for c, unit in zip(standard_cols, infered_units):
+            # TODO: could we return unmapped columns here?
             mapped_col, col_map = self.primary_variables.from_mapping(
                 c, allow_failure=self._allow_map_failures
             )
