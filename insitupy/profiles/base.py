@@ -6,24 +6,31 @@ import geopandas as gpd
 
 from insitupy.io.metadata import MetaDataParser
 from .metadata import ProfileMetaData
-from insitupy.variables import MeasurementDescription, ExtendableVariables
-
+from insitupy.variables import (
+    MeasurementDescription, ExtendableVariables, base_primary_variables_yaml,
+    base_metadata_variables_yaml
+)
 
 LOG = logging.getLogger(__name__)
 
 
-class ProfileData:
+class MeasurementData:
     """
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
-    META_PARSER = MetaDataParser
+    DEFAULT_METADATA_VARIABLE_FILES = [
+        base_metadata_variables_yaml
+    ]
+    DEFAULT_PRIMARY_VARIABLE_FILES = [
+        base_primary_variables_yaml
+    ]
 
     def __init__(
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
         variable: MeasurementDescription,
+        meta_parser: MetaDataParser,
         original_file=None,
-        units_map=None,
         allow_map_failure=False
     ):
         """
@@ -33,29 +40,22 @@ class ProfileData:
                 Should include depth and optional bottom depth
                 Should include sample or sample_a, sample_b, etc
             metadata: ProfileMetaData object
+            meta_parser: MetaDataParser object. This will hold our variables
+                map and units map
             variable: description of variable
             original_file: optional track original file
-            units_map: optional dictionary of column name to unit
             allow_map_failures: if a mapping fails, warn us and use the
                 original string (default False)
 
         """
-        self._units_map = units_map
+        self._meta_parser = meta_parser
+        self._units_map = meta_parser.units_map
         self._original_file = original_file
-        self._depth_layer = self.depth_columns()[0]
-        self._lower_depth_layer = self.depth_columns()[1]
         self._metadata = metadata
         self._allow_map_failure = allow_map_failure
         self.variable: MeasurementDescription = variable
         # mapping of column name to measurement type
         self._column_mappings = {}
-        # List of measurements to keep
-        self._measurements_to_keep = (
-            self.shared_column_options() + [self.variable]
-        )
-
-        self._id = metadata.site_name
-        self._dt = metadata.date_time
 
         self._sample_column = None
         # This will populate the column mapping
@@ -66,35 +66,8 @@ class ProfileData:
         else:
             self._df = self._format_df(input_df)
 
-        columns = self._df.columns.values
-        if len(columns) > 0 and self._depth_layer.code not in columns:
-            raise ValueError(f"Expected {self._depth_layer} in columns")
-
-        # List of columns that are not the desired variable
-        _non_measure_columns = [
-            self._depth_layer.code, self._lower_depth_layer.code,
-            "datetime",
-            "geometry"
-        ]
-        self._non_measure_columns = [
-            c for c in _non_measure_columns if c in columns
-        ]
-
-        # describe the data a bit
-        self._has_layers = self._lower_depth_layer.code in columns
-        # Extend the df info
-        self._add_thickness_to_df()
-
-    @classmethod
-    def depth_columns(cls):
-        return [
-            cls.META_PARSER.PRIMARY_VARIABLES_CLASS.DEPTH,
-            cls.META_PARSER.PRIMARY_VARIABLES_CLASS.BOTTOM_DEPTH
-        ]
-
-    @classmethod
-    def shared_column_options(cls):
-        return cls.depth_columns()
+    def _format_df(self, input_df):
+        raise NotImplementedError("not implemented")
 
     def _set_column_mappings(self, input_df):
         # Get rid of columns we don't want and populate column mapping
@@ -102,7 +75,7 @@ class ProfileData:
         for c in columns:
             # Find the variable associated with each column
             # and store a map
-            cn, cm = self.META_PARSER.PRIMARY_VARIABLES_CLASS.from_mapping(
+            cn, cm = self._meta_parser.primary_variables.from_mapping(
                 c, allow_failure=self._allow_map_failure
             )
             # join with existing mappings
@@ -138,6 +111,150 @@ class ProfileData:
         )
         self._sample_column = sample_column_type.code
         return input_df
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+    @property
+    def units_map(self):
+        return self._units_map
+
+    @property
+    def latlon(self):
+        # return location metadata
+        return self._metadata.latitude, self._metadata.longitude
+
+    @property
+    def df(self):
+        return self._df
+
+    @staticmethod
+    def read_csv_dataframe(profile_filename, columns, header_position):
+        """
+        Read in a profile file. Managing the number of lines to skip and
+        adjusting column names
+
+        Args:
+            profile_filename: Filename containing a manually measured
+                             profile
+            columns: list of columns to use in dataframe
+            header_position: skiprows for pd.read_csv
+        Returns:
+            df: pd.dataframe contain csv data with desired column names
+        """
+        raise NotImplementedError("Not implemented")
+
+    @classmethod
+    def from_csv(
+        cls, fname, variable: MeasurementDescription, timezone="US/Mountain",
+        allow_map_failures=False, metadata_variable_files=None,
+        primary_variable_files=None
+    ):
+        """
+        Args:
+            fname: path to file
+            variable: variable in the file
+            timezone: local timezone for file
+            allow_map_failures: allow metadata and column unknowns
+            metadata_variable_files: list of yaml files with metadata variables
+            primary_variable_files: list of yaml files with primary variables
+        Returns:
+            the instantiated class
+        """
+        primary_variable_files = primary_variable_files or \
+            cls.DEFAULT_PRIMARY_VARIABLE_FILES
+        metadata_variable_files = metadata_variable_files or \
+            cls.DEFAULT_METADATA_VARIABLE_FILES
+        meta_parser = MetaDataParser(
+            fname, timezone,
+            ExtendableVariables(entries=primary_variable_files),
+            ExtendableVariables(entries=metadata_variable_files),
+            allow_map_failures=allow_map_failures
+        )
+        # Parse the metadata and column info
+        metadata, columns, columns_map, header_pos = meta_parser.parse()
+        # read in the actual data
+        if columns is None and not columns_map:
+            # Use an empty dataframe if the file is empty
+            LOG.warning(f"File {fname} is empty of rows")
+            data = pd.DataFrame()
+        else:
+            data = cls.read_csv_dataframe(fname, columns, header_pos)
+
+        return cls(data, metadata, variable, meta_parser)
+
+
+class ProfileData(MeasurementData):
+    """
+    This would be one pit, SMP profile, etc
+    Unique date, location, variable
+    """
+
+    def __init__(
+        self, input_df: pd.DataFrame, metadata: ProfileMetaData,
+        variable: MeasurementDescription,
+        meta_parser: MetaDataParser,
+        original_file=None,
+        allow_map_failure=False
+    ):
+        """
+        Take df of layered data (SMP, pit, etc)
+        Args:
+            input_df: dataframe of data
+                Should include depth and optional bottom depth
+                Should include sample or sample_a, sample_b, etc
+            metadata: ProfileMetaData object
+            meta_parser: MetaDataParser object. This will hold our variables
+                map and units map
+            variable: description of variable
+            original_file: optional track original file
+            units_map: optional dictionary of column name to unit
+            allow_map_failures: if a mapping fails, warn us and use the
+                original string (default False)
+
+        """
+        # These are our default shared columns
+        self._depth_columns = [
+            meta_parser.primary_variables.entries["DEPTH"],
+            meta_parser.primary_variables.entries["BOTTOM_DEPTH"]
+        ]
+        self._depth_layer = self._depth_columns[0]
+        self._lower_depth_layer = self._depth_columns[1]
+        # List of measurements to keep
+        self._measurements_to_keep = (
+            self.shared_column_options() + [variable]
+        )
+        self._id = metadata.site_name
+        self._dt = metadata.date_time
+        # Init the measurment class
+        super().__init__(
+            input_df, metadata, variable,
+            meta_parser,
+            original_file=original_file,
+            allow_map_failure=allow_map_failure
+        )
+        columns = self._df.columns.values
+        if len(columns) > 0 and self._depth_layer.code not in columns:
+            raise ValueError(f"Expected {self._depth_layer} in columns")
+
+        # List of columns that are not the desired variable
+        _non_measure_columns = [
+            self._depth_layer.code, self._lower_depth_layer.code,
+            "datetime",
+            "geometry"
+        ]
+        self._non_measure_columns = [
+            c for c in _non_measure_columns if c in columns
+        ]
+
+        # describe the data a bit
+        self._has_layers = self._lower_depth_layer.code in columns
+        # Extend the df info
+        self._add_thickness_to_df()
+
+    def shared_column_options(self):
+        return self._depth_columns
 
     def _format_df(self, input_df):
         """
@@ -175,28 +292,11 @@ class ProfileData:
     def _add_thickness_to_df(self):
         # set the thickness of the layer
         if self._has_layers:
-            self._df[self.META_PARSER.PRIMARY_VARIABLES_CLASS.LAYER_THICKNESS.code] = (
+            self._df[self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code] = (
                 self._df[self._depth_layer.code] - self._df[
                     self._lower_depth_layer.code
                 ]
             )
-
-    @property
-    def metadata(self):
-        return self._metadata
-
-    @property
-    def units_map(self):
-        return self._units_map
-
-    @property
-    def latlon(self):
-        # return location metadata
-        return self._metadata.latitude, self._metadata.longitude
-
-    @property
-    def df(self):
-        return self._df
 
     @property
     def sum(self):
@@ -221,7 +321,7 @@ class ProfileData:
         if self._has_layers:
             # height weighted mean for these layers
             thickness = self._df[
-                self.META_PARSER.PRIMARY_VARIABLES_CLASS.LAYER_THICKNESS.code
+                self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code
             ]
             # this works for a weighted mean, but is not assumed to be
             # the total thickness of the snowpack
@@ -248,28 +348,6 @@ class ProfileData:
         df[self.variable.code] = profile_average
         columns_of_interest = [*self._non_measure_columns, self.variable.code]
         return df.loc[:, columns_of_interest]
-
-    @staticmethod
-    def read_csv_dataframe(profile_filename, columns, header_position):
-        """
-        Read in a profile file. Managing the number of lines to skip and
-        adjusting column names
-
-        Args:
-            profile_filename: Filename containing a manually measured
-                             profile
-            columns: list of columns to use in dataframe
-            header_position: skiprows for pd.read_csv
-        Returns:
-            df: pd.dataframe contain csv data with desired column names
-        """
-        raise NotImplementedError("Not implemented")
-
-    @classmethod
-    def from_csv(
-        self, fname, variable: ExtendableVariables, allow_map_failures=False
-    ):
-        raise NotImplementedError("Not implemented")
 
 
 def standardize_depth(depths, desired_format='snow_height', is_smp=False):

@@ -2,52 +2,23 @@ import logging
 
 import pandas as pd
 from pathlib import Path
-
-from insitupy.io.metadata import MetaDataParser
-from . import SnowExMetadataVariables, SnowExPrimaryVariables
-from insitupy.variables import MeasurementDescription
 from insitupy.profiles.base import ProfileData, standardize_depth
-
+from insitupy.variables import base_metadata_variables_yaml, \
+    base_primary_variables_yaml
+from .variables import (
+    primary_variables_yaml, metadata_variables_yaml
+)
 
 LOG = logging.getLogger(__name__)
 
 
-class SnowExMetadataParser(MetaDataParser):
-    METADATA_VARIABLE_CLASS = SnowExMetadataVariables
-    PRIMARY_VARIABLES_CLASS = SnowExPrimaryVariables
-
-
 class SnowExProfileData(ProfileData):
-    META_PARSER = SnowExMetadataParser
-
-    @classmethod
-    def from_csv(
-        cls, fname, variable: MeasurementDescription, timezone="US/Mountain",
-        allow_map_failures=False
-    ):
-        """
-        Args:
-            fname: path to file
-            variable: variable in the file
-            timezone: local timezone for file
-            allow_map_failures: allow metadata and column unknowns
-        Returns:
-            the instantiated class
-        """
-        meta_parser = cls.META_PARSER(
-            fname, timezone, allow_map_failures=allow_map_failures
-        )
-        # Parse the metadata and column info
-        metadata, columns, columns_map, header_pos = meta_parser.parse()
-        # read in the actual data
-        if columns is None and not columns_map:
-            # Use an empty dataframe if the file is empty
-            LOG.warning(f"File {fname} is empty of rows")
-            data = pd.DataFrame()
-        else:
-            data = cls.read_csv_dataframe(fname, columns, header_pos)
-
-        return cls(data, metadata, variable, meta_parser.units_map)
+    DEFAULT_METADATA_VARIABLE_FILES = [
+        base_metadata_variables_yaml, metadata_variables_yaml
+    ]
+    DEFAULT_PRIMARY_VARIABLE_FILES = [
+        base_primary_variables_yaml, primary_variables_yaml
+    ]
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):

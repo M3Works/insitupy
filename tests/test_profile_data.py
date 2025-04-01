@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from insitupy.campaigns.snowex import SnowExProfileData
-from insitupy.variables import BasePrimaryVariables
+from . import BASE_PRIMARY_VARIABLES
 
 
 class TestSnowexPitProfile:
@@ -14,11 +14,11 @@ class TestSnowexPitProfile:
         "fname, variable", [
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BasePrimaryVariables.PERMITTIVITY
+                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY"]
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-                BasePrimaryVariables.DENSITY
+                BASE_PRIMARY_VARIABLES.entries["DENSITY"]
             ),
         ]
     )
@@ -33,11 +33,11 @@ class TestSnowexPitProfile:
         "fname, variable", [
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BasePrimaryVariables.PERMITTIVITY
+                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY"]
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-                BasePrimaryVariables.DENSITY
+                BASE_PRIMARY_VARIABLES.entries["DENSITY"]
             ),
         ]
     )
@@ -52,19 +52,19 @@ class TestSnowexPitProfile:
         "fname, variable, expected", [
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv",
-                BasePrimaryVariables.SNOW_TEMPERATURE, 0.0
+                BASE_PRIMARY_VARIABLES.entries["SNOW_TEMPERATURE"], 0.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BasePrimaryVariables.LWC_A, np.nan
+                BASE_PRIMARY_VARIABLES.entries["LWC_A"], np.nan
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BasePrimaryVariables.PERMITTIVITY_A, np.nan
+                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_A"], np.nan
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-                BasePrimaryVariables.DENSITY_A, 397.8888888
+                BASE_PRIMARY_VARIABLES.entries["DENSITY_A"], 397.8888888
             ),
         ]
     )
@@ -83,19 +83,19 @@ class TestSnowexPitProfile:
         "fname, variable, expected", [
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv",
-                BasePrimaryVariables.SNOW_TEMPERATURE, 95.0
+                BASE_PRIMARY_VARIABLES.entries["SNOW_TEMPERATURE"], 95.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BasePrimaryVariables.LWC_A, 95.0
+                BASE_PRIMARY_VARIABLES.entries["LWC_A"], 95.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BasePrimaryVariables.PERMITTIVITY_B, 95.0
+                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_B"], 95.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-                BasePrimaryVariables.DENSITY_A, 95.0
+                BASE_PRIMARY_VARIABLES.entries["DENSITY_A"], 95.0
             ),
         ]
     )
