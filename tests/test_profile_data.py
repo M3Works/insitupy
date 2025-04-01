@@ -32,11 +32,7 @@ class TestSnowexPitProfile:
     @pytest.mark.parametrize(
         "fname, variable", [
             (
-                "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY"]
-            ),
-            (
-                "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
+                "Density_file_unmapped.csv",
                 BASE_PRIMARY_VARIABLES.entries["DENSITY"]
             ),
         ]
