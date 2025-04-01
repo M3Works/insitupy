@@ -56,3 +56,176 @@ UTM_ZONE:
   - utmzone
   - utm_zone
   match_on_code: true
+AIR_TEMP:
+  auto_remap: true
+  code: air_temp
+  description: Site notes on air temperature
+  map_from:
+  - air_temp
+  match_on_code: true
+ASPECT:
+  auto_remap: true
+  code: aspect
+  description: Site Aspect
+  map_from:
+  - aspect
+  match_on_code: true
+COMMENTS:
+  auto_remap: true
+  code: comments
+  description: Comments in the header
+  map_from:
+  - comments
+  - pit comments
+  match_on_code: true
+COUNT:
+  auto_remap: true
+  code: count
+  description: Count for surrounding perimeter depths
+  map_from:
+  - count
+  match_on_code: true
+FLAGS:
+  auto_remap: true
+  code: flags
+  description: Measurements flags
+  map_from:
+  - flag
+  - flags
+  match_on_code: true
+GROUND_CONDITION:
+  auto_remap: true
+  code: ground_condition
+  description: The condition of the ground
+  map_from:
+  - ground condition
+  match_on_code: true
+GROUND_ROUGHNESS:
+  auto_remap: true
+  code: ground_roughness
+  description: Roughness Description
+  map_from:
+  - ground roughness
+  match_on_code: true
+GROUND_VEGETATION:
+  auto_remap: true
+  code: ground_vegetation
+  description: Description of the vegetation
+  map_from:
+  - ground vegetation
+  match_on_code: true
+IGNORE:
+  auto_remap: false
+  code: ignore
+  description: Ignore this
+  map_from:
+  - profile_id
+  - timing
+  - smp_serial_number
+  - original_total_samples
+  - data_subsampled_to
+  - wise_serial_no
+  match_on_code: true
+INSTRUMENT:
+  auto_remap: true
+  code: instrument
+  description: Instrument
+  map_from:
+  - measurement_tool
+  match_on_code: true
+NOTES:
+  auto_remap: true
+  code: site_notes
+  description: Site Notes
+  map_from:
+  - notes
+  match_on_code: true
+OBSERVERS:
+  auto_remap: true
+  code: observers
+  description: Observer(s) of the measurement
+  map_from:
+  - operator
+  - surveyors
+  - observer
+  match_on_code: true
+PRECIP:
+  auto_remap: true
+  code: precip
+  description: Site notes on precipitation
+  map_from:
+  - precip
+  match_on_code: true
+SKY_COVER:
+  auto_remap: true
+  code: sky_cover
+  description: Sky Cover Description
+  map_from:
+  - sky
+  match_on_code: true
+SLOPE:
+  auto_remap: true
+  code: slope_angle
+  description: Slope Angle
+  map_from:
+  - slope
+  - slope_angle
+  match_on_code: true
+TREE_CANOPY:
+  auto_remap: true
+  code: tree_canopy
+  description: Description of the tree canopy
+  map_from:
+  - tree canopy
+  match_on_code: true
+UTCDOY:
+  auto_remap: true
+  code: utcdoy
+  description: UTC day of year
+  map_from:
+  - utcdoy
+  match_on_code: true
+UTCTOD:
+  auto_remap: true
+  code: utctod
+  description: UTC Time of Day
+  map_from:
+  - utctod
+  match_on_code: true
+UTCYEAR:
+  auto_remap: true
+  code: utcyear
+  description: UTC Year
+  map_from:
+  - utcyear
+  match_on_code: true
+UTM_ZONE:
+  auto_remap: true
+  code: utm_zone
+  description: UTM Zone
+  map_from:
+  - utmzone
+  - utm_zone
+  - zone
+  match_on_code: true
+VEGETATION_HEIGHT:
+  auto_remap: true
+  code: vegetation_height
+  description: The height of the vegetation
+  map_from:
+  - vegetation height
+  match_on_code: true
+WEATHER:
+  auto_remap: true
+  code: weather_description
+  description: Weather Description
+  map_from:
+  - weather
+  match_on_code: true
+WIND:
+  auto_remap: true
+  code: wind
+  description: Site notes on wind
+  map_from:
+  - wind
+  match_on_code: true

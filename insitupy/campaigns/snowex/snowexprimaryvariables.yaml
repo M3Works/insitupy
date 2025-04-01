@@ -22,3 +22,65 @@ IGNORE:
     - avgdensity
     - avg_density
     match_on_code: true
+COMMENTS:
+  auto_remap: false
+  code: comments
+  description: Comments
+  map_from:
+  - comments
+  match_on_code: true
+FLAGS:
+  auto_remap: false
+  code: flags
+  description: Measurements flags
+  map_from:
+  - flag
+  match_on_code: true
+FORCE:
+  auto_remap: false
+  code: force
+  description: Force
+  map_from:
+  - force
+  match_on_code: true
+IGNORE:
+  auto_remap: false
+  code: ignore
+  description: Ignore this
+  map_from:
+  - original_index
+  - id
+  - freq_mhz
+  - camera
+  - avgvelocity
+  - equipment
+  - version_number
+  match_on_code: true
+PARAMETER_CODES:
+  auto_remap: false
+  code: parameter_codes
+  description: Parameter Codes
+  map_from:
+  - parameter_codes
+  match_on_code: true
+REFLECTANCE:
+  auto_remap: false
+  code: reflectance
+  description: Reflectance
+  map_from:
+  - reflectance
+  match_on_code: true
+SAMPLE_SIGNAL:
+  auto_remap: false
+  code: sample_signal
+  description: Sample Signal
+  map_from:
+  - sample_signal
+  match_on_code: true
+SSA:
+  auto_remap: false
+  code: specific_surface_area
+  description: Specific Surface Area
+  map_from:
+  - specific_surface_area
+  match_on_code: true
