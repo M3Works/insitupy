@@ -1,10 +1,15 @@
 import pandas as pd
 import pytest
 
-from insitupy.campaigns.snowex import primary_variables_yaml, metadata_variables_yaml
-from insitupy.variables import base_metadata_variables_yaml, base_primary_variables_yaml
+from insitupy.campaigns.snowex import (
+    primary_variables_yaml, metadata_variables_yaml
+)
+from insitupy.variables import (
+    base_metadata_variables_yaml, base_primary_variables_yaml
+)
 from insitupy.variables import ExtendableVariables
 from insitupy.io.metadata import MetaDataParser
+
 
 @pytest.mark.parametrize(
     "fname", [

@@ -292,7 +292,9 @@ class ProfileData(MeasurementData):
     def _add_thickness_to_df(self):
         # set the thickness of the layer
         if self._has_layers:
-            self._df[self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code] = (
+            self._df[
+                self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code
+            ] = (
                 self._df[self._depth_layer.code] - self._df[
                     self._lower_depth_layer.code
                 ]
