@@ -15,13 +15,18 @@ INSTRUMENT:
   - instrument
   match_on_code: true
 IGNORE:
-    auto_remap: true
-    code: ignore
-    description: Ignore this column
-    map_from:
-    - avgdensity
-    - avg_density
-    match_on_code: true
+  auto_remap: false
+  code: ignore
+  description: Ignore this
+  map_from:
+  - original_index
+  - id
+  - freq_mhz
+  - camera
+  - avgvelocity
+  - equipment
+  - version_number
+  match_on_code: true
 COMMENTS:
   auto_remap: false
   code: comments
@@ -42,19 +47,6 @@ FORCE:
   description: Force
   map_from:
   - force
-  match_on_code: true
-IGNORE:
-  auto_remap: false
-  code: ignore
-  description: Ignore this
-  map_from:
-  - original_index
-  - id
-  - freq_mhz
-  - camera
-  - avgvelocity
-  - equipment
-  - version_number
   match_on_code: true
 PARAMETER_CODES:
   auto_remap: false

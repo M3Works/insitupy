@@ -55,6 +55,7 @@ UTM_ZONE:
   map_from:
   - utmzone
   - utm_zone
+  - zone
   match_on_code: true
 AIR_TEMP:
   auto_remap: true
@@ -198,15 +199,6 @@ UTCYEAR:
   description: UTC Year
   map_from:
   - utcyear
-  match_on_code: true
-UTM_ZONE:
-  auto_remap: true
-  code: utm_zone
-  description: UTM Zone
-  map_from:
-  - utmzone
-  - utm_zone
-  - zone
   match_on_code: true
 VEGETATION_HEIGHT:
   auto_remap: true
