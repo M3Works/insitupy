@@ -12,36 +12,36 @@ from insitupy.io.metadata import MetaDataParser
 
 
 
-@pytest.mark.parametrize(
-    "fname", [
+@pytest.fixture(
+    params=[
         "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
         "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
         "SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv"
-    ]
+    ],
+    scope="class",
 )
+def metadata_info(request, data_path):
+    # This is the parser object
+    obj = MetaDataParser(
+        data_path.joinpath(request.param),
+        "US/Mountain",
+        ExtendableVariables(
+            [base_primary_variables_yaml, primary_variables_yaml]
+        ),
+        ExtendableVariables(
+            [base_metadata_variables_yaml, metadata_variables_yaml]
+        ),
+        allow_map_failures=True
+    )
+    metadata, columns, column_mapping, header_pos = obj.parse()
+    return metadata, columns, column_mapping, header_pos
+
+
 class TestSnowexPitMetadata:
     """
     Test that we can consistently read metadata across
     multiple pit measurements
     """
-
-    @pytest.fixture
-    def metadata_info(self, fname, data_path):
-        # This is the parser object
-        obj = MetaDataParser(
-            data_path.joinpath(fname),
-            "US/Mountain",
-            ExtendableVariables(
-                [base_primary_variables_yaml, primary_variables_yaml]
-            ),
-            ExtendableVariables(
-                [base_metadata_variables_yaml, metadata_variables_yaml]
-            ),
-            allow_map_failures=True
-        )
-        metadata, columns, column_mapping, header_pos = obj.parse()
-        return metadata, columns, column_mapping, header_pos
-
     @pytest.fixture
     def metadata(self, metadata_info):
         return metadata_info[0]
