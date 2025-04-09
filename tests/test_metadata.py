@@ -5,10 +5,11 @@ from insitupy.campaigns.snowex import (
     primary_variables_yaml, metadata_variables_yaml
 )
 from insitupy.variables import (
-    base_metadata_variables_yaml, base_primary_variables_yaml
+    ExtendableVariables, base_metadata_variables_yaml,
+    base_primary_variables_yaml
 )
-from insitupy.variables import ExtendableVariables
 from insitupy.io.metadata import MetaDataParser
+
 
 
 @pytest.mark.parametrize(
@@ -28,7 +29,8 @@ class TestSnowexPitMetadata:
     def metadata_info(self, fname, data_path):
         # This is the parser object
         obj = MetaDataParser(
-            data_path.joinpath(fname), "US/Mountain",
+            data_path.joinpath(fname),
+            "US/Mountain",
             ExtendableVariables(
                 [base_primary_variables_yaml, primary_variables_yaml]
             ),
@@ -52,33 +54,31 @@ class TestSnowexPitMetadata:
     def header_pos(self, metadata_info):
         return metadata_info[3]
 
-    # fname needs to be in test since it is a class
-    # level parameterization
-    def test_id(self, metadata, fname):
+    def test_id(self, metadata):
         assert metadata.site_name == "COERAP_20200427_0845"
 
-    def test_date_time(self, metadata, fname):
+    def test_date_time(self, metadata):
         # converted from mountain time
         assert metadata.date_time == pd.to_datetime(
             "2020-04-27T14:45:00+0000"
         )
 
-    def test_latitude(self, metadata, fname):
+    def test_latitude(self, metadata):
         assert metadata.latitude == 38.92524
 
-    def test_longitude(self, metadata, fname):
+    def test_longitude(self, metadata):
         assert metadata.longitude == -106.97112
 
-    def test_utm_epsg(self, metadata, fname):
+    def test_utm_epsg(self, metadata):
         assert metadata.utm_epsg == '26913'
 
-    def test_site_name(self, metadata, fname):
+    def test_site_name(self, metadata):
         assert metadata.campaign_name == "East River"
 
-    def test_flags(self, metadata, fname):
+    def test_flags(self, metadata):
         assert metadata.flags is None
 
-    def test_header_position(self, header_pos, fname):
+    def test_header_position(self, header_pos):
         assert header_pos == 10
 
 
@@ -98,7 +98,8 @@ def test_columns(fname, expected_cols, data_path):
     Test the columns we expect to pass back from the file
     """
     obj = MetaDataParser(
-        data_path.joinpath(fname), "US/Mountain",
+        data_path.joinpath(fname),
+        "US/Mountain",
         ExtendableVariables(
             [base_primary_variables_yaml, primary_variables_yaml]
         ),
