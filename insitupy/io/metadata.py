@@ -1,15 +1,13 @@
-from datetime import timedelta
-
 import logging
 from typing import List, Union
 
 import pandas as pd
-import pytz
 import utm
 
+from .dates import DateManager
 from .strings import StringManager
-from ..variables import ExtendableVariables
 from ..profiles.metadata import ProfileMetaData
+from ..variables import ExtendableVariables
 
 LOG = logging.getLogger(__name__)
 
@@ -21,6 +19,7 @@ class MetaDataParser:
     OUT_TIMEZONE = "UTC"
     ID_NAMES = ["pitid", "pit_id"]
     SITE_NAME_NAMES = ["location", "site_name"]
+    DATE_TIME = "datetime"
     LAT_NAMES = ["lat", "latitude"]
     LON_NAMES = ["lon", "lon", "longitude"]
     UTM_EPSG_PREFIX = "269"
@@ -92,123 +91,22 @@ class MetaDataParser:
 
         return None
 
-    @staticmethod
-    def _handle_separate_datetime(row, keys, out_tz):
-        """
-        Handle a separate date and time entry
-
-        Args:
-            keys: list of keys
-            out_tz: desired timezone
-        Returns:
-            parsed datetime
-        """
-        # Handle data dates and times
-        if 'date' in keys and 'time' in keys:
-            # Assume MMDDYY format
-            if len(str(row['date'])) == 6:
-                dt = str(row['date'])
-                # Put into YY-MM-DD
-                row['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
-                # Allow for nan time
-                row['time'] = StringManager.parse_none(
-                    row['time']
-                )
-
-            date_str = str(row["date"])
-            if row["time"] is not None:
-                date_str += f" {row['time']}"
-            d = pd.to_datetime(date_str)
-
-        elif 'date' in keys:
-            d = pd.to_datetime(row['date'])
-
-        # Handle gpr data dates
-        elif 'utcyear' in keys and 'utcdoy' in keys and 'utctod' in keys:
-            base = pd.to_datetime(
-                '{:d}-01-01 00:00:00 '.format(int(row['utcyear'])),
-                utc=True)
-
-            # Number of days since january 1
-            d = int(row['utcdoy']) - 1
-
-            # Zulu time (time without colons)
-            time = str(row['utctod'])
-            hr = int(time[0:2])  # hours
-            mm = int(time[2:4])  # minutes
-            ss = int(time[4:6])  # seconds
-            ms = int(
-                float('0.' + time.split('.')[-1]) * 1000)  # milliseconds
-
-            delta = timedelta(
-                days=d, hours=hr, minutes=mm, seconds=ss, milliseconds=ms
-            )
-            # This is the only key set that ignores in_timezone
-            d = base.astimezone(pytz.timezone('UTC')) + delta
-            d = d.astimezone(out_tz)
-
-        else:
-            raise ValueError(
-                f'Data is missing date/time info!\n{row}'
-            )
-        return d
-
     def parse_date_time(self) -> pd.Timestamp:
-        return self.datetime_from_row(
-            self.rough_obj, in_timezone=self._input_timezone
-        )
-
-    @classmethod
-    def datetime_from_row(cls, row, in_timezone=None):
-        keys = [k.lower() for k in row.keys()]
-        d = None
-        out_tz = pytz.timezone(cls.OUT_TIMEZONE)
-        # Convert timezones if it is provided
-        # this variable gets rewritten later
-        if in_timezone is not None:
-            in_tz = pytz.timezone(in_timezone)
-        # Otherwise assume incoming data is the same timezone
-        # TODO: how do we handle row based timezone
-        else:
-            raise ValueError("We did not recieve a valid in_timezone")
-
-        # Look for a single header entry containing date and time.
-        for k in keys:
-            kl = k.lower()
-            if 'date' in kl and 'time' in kl:
-                str_date = str(row[k].replace('T', '-'))
-                d = pd.to_datetime(str_date)
-                break
+        datetime = None
+        # In case we found a date entry that has date and time
+        if self.rough_obj[self.DATE_TIME] is not None:
+            str_date = str(self.rough_obj[self.DATE_TIME].replace('T', '-'))
+            datetime = pd.to_datetime(str_date)
 
         # If we didn't find date/time combined.
-        if d is None:
-            d = cls._handle_separate_datetime(row, keys, out_tz)
+        if datetime is None:
+            datetime = DateManager.handle_separate_datetime(self.rough_obj)
 
-        if in_timezone is not None:
-            if d.tz is not None and d.tz.zone == in_tz.zone:
-                pass
-            else:
-                d = d.tz_localize(in_tz)
-                d = d.astimezone(out_tz)
-
-        else:
-            d.replace(tzinfo=out_tz)
-
-        row['date'] = d.date()
-
-        # Don't add time to a time that was nan or none
-        if 'time' not in row.keys():
-            row['time'] = d.timetz()
-        else:
-            if row['time'] is not None:
-                row['time'] = d.timetz()
-
-        dt_str = row["date"].isoformat()
-        if row.get("time"):
-            dt_str += f"T{row['time'].isoformat()}"
-        dt = pd.to_datetime(dt_str)
-
-        return dt
+        return DateManager.adjust_timezone(
+            datetime,
+            in_timezone=self._input_timezone,
+            out_timezone=self.OUT_TIMEZONE
+        )
 
     @classmethod
     def _parse_location_from_raw(cls, row):
