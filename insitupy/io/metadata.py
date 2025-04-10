@@ -2,9 +2,9 @@ import logging
 from typing import List, Union
 
 import pandas as pd
-import utm
 
 from .dates import DateManager
+from .locations import LocationManager
 from .strings import StringManager
 from ..profiles.metadata import ProfileMetaData
 from ..variables import ExtendableVariables
@@ -20,10 +20,6 @@ class MetaDataParser:
     ID_NAMES = ["pitid", "pit_id"]
     SITE_NAME_NAMES = ["location", "site_name"]
     DATE_TIME = "datetime"
-    LAT_NAMES = ["lat", "latitude"]
-    LON_NAMES = ["lon", "lon", "longitude"]
-    UTM_EPSG_PREFIX = "269"
-    NORTHERN_HEMISPHERE = True
 
     def __init__(
         self,
@@ -82,9 +78,8 @@ class MetaDataParser:
     @property
     def lat_lon_easting_northing(self):
         if self._lat_lon_easting_northing is None:
-            self._lat_lon_easting_northing = self.parse_location_from_row(
-                self.rough_obj
-            )
+            self._lat_lon_easting_northing = \
+                LocationManager.parse(self.rough_obj)
         return self._lat_lon_easting_northing
 
     def parse_id(self) -> Union[str, None]:
@@ -114,74 +109,6 @@ class MetaDataParser:
             out_timezone=self.OUT_TIMEZONE
         )
 
-    @classmethod
-    def _parse_location_from_raw(cls, row):
-        """
-        Initial parse of lat, lon, easting, northing from
-        the rough object
-        """
-        lat = None
-        lon = None
-        easting = None
-        northing = None
-        for k, v in row.items():
-            if k in cls.LAT_NAMES:
-                lat = float(v)
-            elif k in cls.LON_NAMES:
-                lon = float(v)
-            elif k == "easting":
-                easting = v
-            elif k == "northing":
-                northing = v
-
-        return lat, lon, easting, northing
-
-    @classmethod
-    def lat_lon_from_easting_northing(cls, row, easting, northing):
-        zone_number = cls.utm_epsg_from_row(row)
-        if isinstance(zone_number, str):
-            raise RuntimeError(
-                f"{zone_number} should be an integer"
-            )
-        # Get the last two digits
-        zone_number = int(str(zone_number)[-2:])
-        try:
-            lat, lon = utm.to_latlon(
-                float(easting), float(northing), int(zone_number),
-                northern=cls.NORTHERN_HEMISPHERE)
-        except Exception as e:
-            LOG.error(e)
-            raise RuntimeError(f"Failed with {easting}, {northing}")
-
-        return lat, lon
-
-    @classmethod
-    def parse_location_from_row(cls, row):
-        """
-        Parse the lat and lon from the rough input object
-        Also parse the easting and northing
-        # UTM Zone,13N
-        # Easting,329131
-        # Northing,4310328
-        # Latitude,38.92524
-        # Longitude,-106.97112
-        # Flags,
-
-        returns lat, lon, easting, northing
-        """
-        lat, lon, easting, northing = cls._parse_location_from_raw(row)
-
-        # Do nothing first
-        if lat and lon:
-            LOG.info("Latitude and Longitude parsed from the file")
-        elif easting and northing:
-            lat, lon = cls.lat_lon_from_easting_northing(row, easting, northing)
-        else:
-            raise ValueError(
-                f"Could not parse location from {row}"
-            )
-        return lat, lon, easting, northing
-
     def parse_latitude(self) -> float:
         return self.lat_lon_easting_northing[0]
 
@@ -189,19 +116,7 @@ class MetaDataParser:
         return self.lat_lon_easting_northing[1]
 
     def parse_utm_epsg(self) -> int:
-        return self.utm_epsg_from_row(self.rough_obj)
-
-    @classmethod
-    def utm_epsg_from_row(cls, row):
-        epsg = None
-        if 'utm_zone' in row.keys():
-            utm_zone = int(
-                ''.join([c for c in row['utm_zone'] if c.isnumeric()]))
-            epsg = int(f"{cls.UTM_EPSG_PREFIX}{utm_zone}")
-        elif 'epsg' in row.keys():
-            epsg = row["epsg"]
-        # TODO: row based utm?
-        return epsg
+        return LocationManager.parse_utm_epsg(self.rough_obj)
 
     @classmethod
     def parse_campaign_from_row(cls, row):
