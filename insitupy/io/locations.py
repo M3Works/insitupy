@@ -5,39 +5,40 @@ from typing import Tuple
 LOG = logging.getLogger(__name__)
 
 
-class LocationManager:
-    LAT_NAMES = ["lat", "latitude"]
-    LON_NAMES = ["lon", "lon", "longitude"]
+class RowKeys:
+    # These are the keys mapped to from the YAML files
+    LATITUDE = "latitude"
+    LONGITUDE = "longitude"
+    EASTING = "easting"
+    NORTHING = "northing"
+    EPSG = 'epsg'
+    UTM_ZONE = 'utm_zone'
     UTM_EPSG_PREFIX = "269"
+
+
+class LocationManager:
     NORTHERN_HEMISPHERE = True
 
     @classmethod
-    def parse_location_from_raw(cls, headers: dict) -> Tuple[str, str, str, str]:
+    def parse_from_headers(cls, headers: dict) -> Tuple[str, str, str, str]:
         """
         Initial parse of lat, lon, easting, northing from the headers object
 
         Args:
-            headers (dict): Parsed header headerss with key-value pairs
+            headers (dict): Parsed header with key-value pairs
 
         Returns:
             (Tuple) Latitude, Longitude, Easting, Northing
         """
-        lat = None
-        lon = None
-        easting = None
-        northing = None
+        latitude = headers.get(RowKeys.LATITUDE, None)
+        longitude = headers.get(RowKeys.LONGITUDE, None)
+        easting = headers.get(RowKeys.EASTING, None)
+        northing = headers.get(RowKeys.NORTHING, None)
 
-        for k, v in headers.items():
-            if k in cls.LAT_NAMES:
-                lat = float(v)
-            elif k in cls.LON_NAMES:
-                lon = float(v)
-            elif k == "easting":
-                easting = v
-            elif k == "northing":
-                northing = v
+        latitude = float(latitude) if latitude is not None else latitude
+        longitude = float(longitude) if longitude is not None else longitude
 
-        return lat, lon, easting, northing
+        return latitude, longitude, easting, northing
 
     @classmethod
     def lat_lon_from_easting_northing(
@@ -57,9 +58,7 @@ class LocationManager:
         zone_number = cls.parse_utm_epsg(headers)
 
         if isinstance(zone_number, str):
-            raise RuntimeError(
-                f"{zone_number} should be an integer"
-            )
+            raise RuntimeError(f"{zone_number} should be an integer")
 
         # Get the last two digits
         zone_number = int(str(zone_number)[-2:])
@@ -91,26 +90,30 @@ class LocationManager:
 
         returns lat, lon, easting, northing
         """
-        lat, lon, easting, northing = cls.parse_location_from_raw(headers)
+        lat, lon, easting, northing = cls.parse_from_headers(headers)
 
         # Do nothing first
         if lat and lon:
-            LOG.info("Latitude and Longitude parsed from the file")
+            LOG.info("Latitude and Longitude parsed from the file header")
         elif easting and northing:
+            LOG.info(
+                "Latitude and Longitude converted from easting and northing"
+            )
             lat, lon = cls.lat_lon_from_easting_northing(
                 headers, easting, northing
             )
         else:
             raise ValueError(f"Could not parse location from {headers}")
+
         return lat, lon, easting, northing
 
     @classmethod
     def parse_utm_epsg(cls, headers: dict) -> int | None:
         # TODO: headers based utm?
-        if 'utm_zone' in headers.keys():
+        if RowKeys.UTM_ZONE in headers.keys():
             utm_zone = int(
-                ''.join([c for c in headers['utm_zone'] if c.isnumeric()])
+                ''.join([c for c in headers[RowKeys.UTM_ZONE] if c.isnumeric()])
             )
-            return int(f"{cls.UTM_EPSG_PREFIX}{utm_zone}")
-        elif 'epsg' in headers.keys():
-            return int(headers["epsg"])
+            return int(f"{RowKeys.UTM_EPSG_PREFIX}{utm_zone}")
+        elif RowKeys.EPSG in headers.keys():
+            return int(headers[RowKeys.EPSG])
