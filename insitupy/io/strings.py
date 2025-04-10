@@ -1,6 +1,7 @@
 import logging
-import numpy as np
 from typing import List, Union
+
+import numpy as np
 
 LOG = logging.getLogger(__name__)
 
@@ -45,8 +46,8 @@ class StringManager:
         Returns items found in the encapsulator, useful for finding units
 
         Args:
-            str_line: String that has encapusulated info we want removed
-            encapsulator: string of characters encapusulating info to be removed
+            str_line: String that has encapsulated info we want removed
+            encapsulator: string of characters encapsulating info to be removed
         Returns:
             result: list of strings found inside anything between encapsulators
 
@@ -82,11 +83,11 @@ class StringManager:
     @classmethod
     def strip_encapsulated(cls, str_line: str, encapsulator: str) -> str:
         """
-        Removes from a str anything thats encapusulated by characters and the
+        Removes from a str anything that's encapusulated by characters and the
         encapsulating chars themselves
 
         Args:
-            str_line: String that has encapusulated info we want removed
+            str_line: String that has encapsulated info we want removed
             encapsulator: string of characters encapsulating info to be removed
         Returns:
             final: String without anything between encapsulators

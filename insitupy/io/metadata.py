@@ -26,15 +26,21 @@ class MetaDataParser:
     NORTHERN_HEMISPHERE = True
 
     def __init__(
-        self, fname, timezone, primary_variables: ExtendableVariables,
+        self,
+        fname,
+        timezone,
+        primary_variables: ExtendableVariables,
         metadata_variables: ExtendableVariables,
-        header_sep=",", allow_split_lines=False,
+        header_sep=",",
+        allow_split_lines=False,
         allow_map_failures=False,
-        _id=None, campaign_name=None, units_map=None
+        _id=None,
+        campaign_name=None,
+        units_map=None
     ):
         """
         Args:
-            fname: path to file
+            fname: path of csv file to parse
             timezone: string timezone
             primary_variables: ExtendableVariables for primary variables
             metadata_variables: ExtendableVariables for metadata variables
@@ -46,7 +52,7 @@ class MetaDataParser:
                 that character will be combined with the previous line
             allow_map_failures: if a mapping fails, warn us and use the
                 original string (default False)
-            id: optional pass in to override id in parse_id
+            _id: optional pass in to override id in parse_id
             campaign_name: optional override for campaign name
             units_map = optional map of variable type to MeasurementDescription
         """

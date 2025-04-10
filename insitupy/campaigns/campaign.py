@@ -165,18 +165,21 @@ class ProfileDataCollection:
             This class with a collection of profiles and metadata
         """
         # TODO: timezone here (mapped from site?)
-        # parse mlutiple files and create an iterable of ProfileData
+        # parse multiple files and create an iterable of ProfileData
         primary_variable_files = primary_variable_files or \
             cls.DEFAULT_PRIMARY_VARIABLE_FILES
         metadata_variable_files = metadata_variable_files or \
             cls.DEFAULT_METADATA_VARIABLE_FILES
 
         meta_parser = cls.META_PARSER(
-            fname, timezone,
+            fname,
+            timezone,
             ExtendableVariables(entries=primary_variable_files),
             ExtendableVariables(entries=metadata_variable_files),
-            header_sep=header_sep, _id=site_id,
-            campaign_name=campaign_name, allow_map_failures=allow_map_failure,
+            header_sep=header_sep,
+            _id=site_id,
+            campaign_name=campaign_name,
+            allow_map_failures=allow_map_failure,
             allow_split_lines=True
         )
         # Parse the metadata and column info
