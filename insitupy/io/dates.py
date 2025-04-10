@@ -4,11 +4,10 @@ import pandas as pd
 import pytz
 
 from .strings import StringManager
+from .yaml_codes import YamlCodes
 
 
 class RowKeys:
-    DATE = 'date'
-    TIME = 'time'
     UTC_DOY = 'utcdoy'
     UTC_YEAR = 'utcyear'
     UTC_TOD = 'utctod'
@@ -29,23 +28,23 @@ class DateManager:
         keys = [k.lower() for k in rows.keys()]
 
         # Handle data dates and times
-        if RowKeys.DATE in keys and RowKeys.TIME in keys:
-            date_str = str(rows[RowKeys.DATE])
+        if YamlCodes.DATE in keys and YamlCodes.TIME in keys:
+            date_str = str(rows[YamlCodes.DATE])
 
             # Let pandas try the date separate first
             if len(date_str) == 6:
                 date_str = pd.to_datetime(date_str).strftime('%Y-%m-%d')
 
             # Allow for nan time
-            time_str = StringManager.parse_none(rows[RowKeys.TIME])
+            time_str = StringManager.parse_none(rows[YamlCodes.TIME])
 
             if time_str is not None:
                 date_str += f" {time_str}"
 
             datetime = pd.to_datetime(date_str)
 
-        elif RowKeys.DATE in keys:
-            datetime = pd.to_datetime(rows[RowKeys.DATE])
+        elif YamlCodes.DATE in keys:
+            datetime = pd.to_datetime(rows[YamlCodes.DATE])
 
         # Handle gpr data dates
         elif RowKeys.UTC_YEAR in keys and \

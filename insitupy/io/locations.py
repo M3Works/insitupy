@@ -2,18 +2,9 @@ import logging
 import utm
 from typing import Tuple
 
+from .yaml_codes import YamlCodes
+
 LOG = logging.getLogger(__name__)
-
-
-class RowKeys:
-    # These are the keys mapped to from the YAML files
-    LATITUDE = "latitude"
-    LONGITUDE = "longitude"
-    EASTING = "easting"
-    NORTHING = "northing"
-    EPSG = 'epsg'
-    UTM_ZONE = 'utm_zone'
-    UTM_EPSG_PREFIX = "269"
 
 
 class LocationManager:
@@ -30,10 +21,10 @@ class LocationManager:
         Returns:
             (Tuple) Latitude, Longitude, Easting, Northing
         """
-        latitude = headers.get(RowKeys.LATITUDE, None)
-        longitude = headers.get(RowKeys.LONGITUDE, None)
-        easting = headers.get(RowKeys.EASTING, None)
-        northing = headers.get(RowKeys.NORTHING, None)
+        latitude = headers.get(YamlCodes.LATITUDE, None)
+        longitude = headers.get(YamlCodes.LONGITUDE, None)
+        easting = headers.get(YamlCodes.EASTING, None)
+        northing = headers.get(YamlCodes.NORTHING, None)
 
         latitude = float(latitude) if latitude is not None else latitude
         longitude = float(longitude) if longitude is not None else longitude
@@ -110,10 +101,12 @@ class LocationManager:
     @classmethod
     def parse_utm_epsg(cls, headers: dict) -> int | None:
         # TODO: headers based utm?
-        if RowKeys.UTM_ZONE in headers.keys():
+        if YamlCodes.UTM_ZONE in headers.keys():
             utm_zone = int(
-                ''.join([c for c in headers[RowKeys.UTM_ZONE] if c.isnumeric()])
+                ''.join(
+                    [c for c in headers[YamlCodes.UTM_ZONE] if c.isnumeric()]
+                )
             )
-            return int(f"{RowKeys.UTM_EPSG_PREFIX}{utm_zone}")
-        elif RowKeys.EPSG in headers.keys():
-            return int(headers[RowKeys.EPSG])
+            return int(f"{YamlCodes.UTM_EPSG_PREFIX}{utm_zone}")
+        elif YamlCodes.EPSG in headers.keys():
+            return int(headers[YamlCodes.EPSG])
