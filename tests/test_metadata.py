@@ -1,14 +1,11 @@
 import pandas as pd
 import pytest
 
-from insitupy.campaigns.snowex import (
-    primary_variables_yaml, metadata_variables_yaml
-)
-from insitupy.variables import (
-    ExtendableVariables, base_metadata_variables_yaml,
-    base_primary_variables_yaml
-)
+from insitupy.campaigns.snowex import snowex_metadata_yaml, \
+    snowex_variables_yaml
 from insitupy.io.metadata import MetaDataParser
+from insitupy.variables import ExtendableVariables, \
+    base_metadata_variables_yaml, base_primary_variables_yaml
 
 
 # List of test files with the values as the expected columns to be parsed
@@ -34,10 +31,10 @@ def parser_object(request, data_path):
         data_path.joinpath(request.param),
         "US/Mountain",
         ExtendableVariables(
-            [base_primary_variables_yaml, primary_variables_yaml]
+            [base_primary_variables_yaml, snowex_variables_yaml]
         ),
         ExtendableVariables(
-            [base_metadata_variables_yaml, metadata_variables_yaml]
+            [base_metadata_variables_yaml, snowex_metadata_yaml]
         ),
         allow_map_failures=True
     )
