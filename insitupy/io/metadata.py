@@ -6,6 +6,7 @@ import pandas as pd
 from .dates import DateManager
 from .locations import LocationManager
 from .strings import StringManager
+from .yaml_codes import YamlCodes
 from ..profiles.metadata import ProfileMetaData
 from ..variables import ExtendableVariables
 
@@ -17,9 +18,6 @@ class MetaDataParser:
     Base class for parsing metadata
     """
     OUT_TIMEZONE = "UTC"
-    ID_NAMES = ["pitid", "pit_id"]
-    SITE_NAME_NAMES = ["location", "site_name"]
-    DATE_TIME = "datetime"
 
     def __init__(
         self,
@@ -82,21 +80,25 @@ class MetaDataParser:
                 LocationManager.parse(self.rough_obj)
         return self._lat_lon_easting_northing
 
-    def parse_id(self) -> Union[str, None]:
+    # TODO: See remark on .parse_campaign_name
+    def parse_id(self) -> str:
         if self._id is not None:
             return self._id
         else:
-            for k, v in self.rough_obj.items():
-                if k in self.ID_NAMES:
-                    return v
-
-        return None
+            try:
+                return self.rough_obj[YamlCodes.ID_NAME]
+            except KeyError:
+                raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
 
     def parse_date_time(self) -> pd.Timestamp:
         datetime = None
+        # TODO: Move this logic into the DateManager and extend the base
+        #       metadata parser to also support separate time and date fields
         # In case we found a date entry that has date and time
-        if self.rough_obj[self.DATE_TIME] is not None:
-            str_date = str(self.rough_obj[self.DATE_TIME].replace('T', '-'))
+        if self.rough_obj[YamlCodes.DATE_TIME] is not None:
+            str_date = str(
+                self.rough_obj[YamlCodes.DATE_TIME].replace('T', '-')
+            )
             datetime = pd.to_datetime(str_date)
 
         # If we didn't find date/time combined.
@@ -118,24 +120,20 @@ class MetaDataParser:
     def parse_utm_epsg(self) -> int:
         return LocationManager.parse_utm_epsg(self.rough_obj)
 
-    @classmethod
-    def parse_campaign_from_row(cls, row):
-        for k, v in row.items():
-            if k in cls.SITE_NAME_NAMES:
-                return v
-        return None
-
+    # TODO: This needs to be revisited. Right now we have a mix and match
+    #       of wording for a site vs a campaign
     def parse_campaign_name(self) -> str:
         if self._campaign_name is not None:
             return self._campaign_name
         else:
-            campaign_name = self.parse_campaign_from_row(self.rough_obj)
-            if campaign_name is None:
+            try:
+                return self.rough_obj[YamlCodes.SITE_NAME]
+            except KeyError:
                 raise RuntimeError(
                     f"Failed to parse Site Name from {self.rough_obj}"
                 )
-            return campaign_name
 
+    # TODO: Expand base metadata YAML to detect this
     def parse_flags(self):
         result = None
         for k, v in self.rough_obj.items():
@@ -145,6 +143,7 @@ class MetaDataParser:
 
         return result
 
+    # TODO: Expand base metadata YAML to detect this
     def observers_from_row(self, row):
         result = None
         for k, v in row.items():
@@ -205,8 +204,8 @@ class MetaDataParser:
         Returns:
             (metadata object, column list, position of header in file)
         """
-        (meta_lines, columns,
-         columns_map, header_position) = self.find_header_info(self._fname)
+        meta_lines, columns, columns_map, header_position = \
+            self.find_header_info(self._fname)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = ProfileMetaData(
