@@ -27,7 +27,9 @@ class MeasurementData:
     ]
 
     def __init__(
-        self, input_df: pd.DataFrame, metadata: ProfileMetaData,
+        self,
+        input_df: pd.DataFrame,
+        metadata: ProfileMetaData,
         variable: MeasurementDescription,
         meta_parser: MetaDataParser,
         original_file=None,
@@ -44,7 +46,7 @@ class MeasurementData:
                 map and units map
             variable: description of variable
             original_file: optional track original file
-            allow_map_failures: if a mapping fails, warn us and use the
+            allow_map_failure: if a mapping fails, warn us and use the
                 original string (default False)
 
         """
@@ -89,10 +91,13 @@ class MeasurementData:
         if len(_sample_columns) == 0:
             raise ValueError(
                 f"No sample columns in {columns}. This is likely because"
-                f" variable {self.variable} is not in columns {input_df.columns}"
+                f" variable {self.variable} is not in columns"
+                f" {input_df.columns}"
             )
         elif len(_sample_columns) > 1:
-            LOG.warning("Only one sample column allowed, keeping the first match")
+            LOG.warning(
+                "Only one sample column allowed, keeping the first match"
+            )
             _sample_columns = [_sample_columns[0]]
         _sample_column = _sample_columns[0]
         # Rename the variable column to the variable code
@@ -147,8 +152,12 @@ class MeasurementData:
 
     @classmethod
     def from_csv(
-        cls, fname, variable: MeasurementDescription, timezone="US/Mountain",
-        allow_map_failures=False, metadata_variable_files=None,
+        cls,
+        fname,
+        variable: MeasurementDescription,
+        timezone="US/Mountain",
+        allow_map_failures=False,
+        metadata_variable_files=None,
         primary_variable_files=None
     ):
         """
@@ -192,7 +201,9 @@ class ProfileData(MeasurementData):
     """
 
     def __init__(
-        self, input_df: pd.DataFrame, metadata: ProfileMetaData,
+        self,
+        input_df: pd.DataFrame,
+        metadata: ProfileMetaData,
         variable: MeasurementDescription,
         meta_parser: MetaDataParser,
         original_file=None,
@@ -209,8 +220,7 @@ class ProfileData(MeasurementData):
                 map and units map
             variable: description of variable
             original_file: optional track original file
-            units_map: optional dictionary of column name to unit
-            allow_map_failures: if a mapping fails, warn us and use the
+            allow_map_failure: if a mapping fails, warn us and use the
                 original string (default False)
 
         """
@@ -227,7 +237,7 @@ class ProfileData(MeasurementData):
         )
         self._id = metadata.site_name
         self._dt = metadata.date_time
-        # Init the measurment class
+        # Init the measurement class
         super().__init__(
             input_df, metadata, variable,
             meta_parser,
@@ -293,11 +303,12 @@ class ProfileData(MeasurementData):
         # set the thickness of the layer
         if self._has_layers:
             self._df[
-                self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code
+                self._meta_parser.primary_variables.entries[
+                    "LAYER_THICKNESS"
+                ].code
             ] = (
-                self._df[self._depth_layer.code] - self._df[
-                    self._lower_depth_layer.code
-                ]
+                    self._df[self._depth_layer.code] -
+                    self._df[self._lower_depth_layer.code]
             )
 
     @property
@@ -323,7 +334,9 @@ class ProfileData(MeasurementData):
         if self._has_layers:
             # height weighted mean for these layers
             thickness = self._df[
-                self._meta_parser.primary_variables.entries["LAYER_THICKNESS"].code
+                self._meta_parser.primary_variables.entries[
+                    "LAYER_THICKNESS"
+                ].code
             ]
             # this works for a weighted mean, but is not assumed to be
             # the total thickness of the snowpack
@@ -388,7 +401,9 @@ def standardize_depth(depths, desired_format='snow_height', is_smp=False):
             new = (depths - max_depth).abs()
 
         elif bottom_is_negative:
-            LOG.info('Converting depths in surface datum to snow height format.')
+            LOG.info(
+                'Converting depths in surface datum to snow height format.'
+            )
 
             new = (depths + abs(min_depth))
 
@@ -398,7 +413,9 @@ def standardize_depth(depths, desired_format='snow_height', is_smp=False):
             new = depths.mul(-1)
 
         elif not bottom_is_negative:
-            LOG.info('Converting depths in snow height to surface datum format.')
+            LOG.info(
+                'Converting depths in snow height to surface datum format.'
+            )
             new = depths - max_depth
 
     else:
