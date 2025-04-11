@@ -44,9 +44,9 @@ class ProfileDataCollection:
     @property
     def SWE(self):
         """
-        Takes all layers for each unique date, location and returns point swe
-        geodataframe
-        We can iterate though all ProfileData in this class and get SWE DF for each
+        Takes all layers for each unique date and location and returns point
+        swe geo-dataframe. We can iterate though all ProfileData in this class
+        and get SWE DF for each
         """
         # find all points with variable == density and calc SWE
         pass
@@ -70,8 +70,13 @@ class ProfileDataCollection:
 
     @classmethod
     def _read_csv(
-        cls, fname, columns, column_mapping, header_pos,
-        metadata: ProfileMetaData, meta_parser: MetaDataParser,
+        cls,
+        fname,
+        columns,
+        column_mapping,
+        header_pos,
+        metadata: ProfileMetaData,
+        meta_parser: MetaDataParser,
         shared_column_options=None,
         allow_map_failures=False
     ) -> List[ProfileData]:
@@ -84,8 +89,8 @@ class ProfileDataCollection:
             metadata: metadata for each object
             meta_parser: metadata parser object
             shared_column_options: shared columns that will be used
-                for data handling and storing. These come from primary variables,
-                but are not the primary data themselves
+                for data handling and storing. These come from primary
+                variables, but are not the primary data themselves
 
         Returns:
             a list of ProfileData objects
@@ -144,9 +149,15 @@ class ProfileDataCollection:
 
     @classmethod
     def from_csv(
-        cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
-        campaign_name=None, allow_map_failure=False,
-        metadata_variable_files=None, primary_variable_files=None
+        cls,
+        fname,
+        timezone="US/Mountain",
+        header_sep=",",
+        site_id=None,
+        campaign_name=None,
+        allow_map_failure=False,
+        metadata_variable_files=None,
+        primary_variable_files=None
     ):
         """
         Find all profiles in a single csv file
@@ -186,8 +197,13 @@ class ProfileDataCollection:
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
         profiles = cls._read_csv(
-            fname, columns, columns_map, header_pos, metadata,
-            meta_parser, allow_map_failures=allow_map_failure
+            fname,
+            columns,
+            columns_map,
+            header_pos,
+            metadata,
+            meta_parser,
+            allow_map_failures=allow_map_failure
         )
 
         # ignore profiles with the name 'ignore'
