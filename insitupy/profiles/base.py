@@ -1,15 +1,14 @@
 import logging
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 
 from insitupy.io.metadata import MetaDataParser
+from insitupy.variables import (ExtendableVariables, MeasurementDescription,
+                                base_metadata_variables_yaml,
+                                base_primary_variables_yaml)
 from .metadata import ProfileMetaData
-from insitupy.variables import (
-    MeasurementDescription, ExtendableVariables, base_primary_variables_yaml,
-    base_metadata_variables_yaml
-)
 
 LOG = logging.getLogger(__name__)
 
@@ -199,7 +198,6 @@ class ProfileData(MeasurementData):
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
-
     def __init__(
         self,
         input_df: pd.DataFrame,

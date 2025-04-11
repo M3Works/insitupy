@@ -5,8 +5,10 @@ import logging
 from typing import List
 
 import pandas as pd
+
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
+from insitupy.variables import ExtendableVariables, MeasurementDescription
 from insitupy.variables import MeasurementDescription, ExtendableVariables
 
 
@@ -34,8 +36,6 @@ class ProfileDataCollection:
     """
     META_PARSER = MetaDataParser
     PROFILE_DATA_CLASS = ProfileData
-    DEFAULT_METADATA_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES
-    DEFAULT_PRIMARY_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
 
     def __init__(self, profiles: List[ProfileData], metadata: ProfileMetaData):
         self._profiles = profiles
@@ -167,9 +167,9 @@ class ProfileDataCollection:
         # TODO: timezone here (mapped from site?)
         # parse multiple files and create an iterable of ProfileData
         primary_variable_files = primary_variable_files or \
-            cls.DEFAULT_PRIMARY_VARIABLE_FILES
+            cls.PROFILE_DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
         metadata_variable_files = metadata_variable_files or \
-            cls.DEFAULT_METADATA_VARIABLE_FILES
+            cls.PROFILE_DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES
 
         meta_parser = cls.META_PARSER(
             fname,
