@@ -37,7 +37,7 @@ class MeasurementDescription:
     cast_type = None  # make this float, int, etc
 
 
-def variable_from_input(x: list[str]):
+def variable_from_input(x: List[str]):
     """
     Get all the variables from a set of files
     Args:
