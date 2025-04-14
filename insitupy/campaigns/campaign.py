@@ -7,10 +7,7 @@ from typing import List
 import pandas as pd
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
-from insitupy.variables import (
-    MeasurementDescription, base_primary_variables_yaml,
-    base_metadata_variables_yaml, ExtendableVariables
-)
+from insitupy.variables import MeasurementDescription, ExtendableVariables
 
 
 SOURCES = [
@@ -37,8 +34,8 @@ class ProfileDataCollection:
     """
     META_PARSER = MetaDataParser
     PROFILE_DATA_CLASS = ProfileData
-    DEFAULT_METADATA_VARIABLE_FILES = [base_metadata_variables_yaml]
-    DEFAULT_PRIMARY_VARIABLE_FILES = [base_primary_variables_yaml]
+    DEFAULT_METADATA_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES
+    DEFAULT_PRIMARY_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
 
     def __init__(self, profiles: List[ProfileData], metadata: ProfileMetaData):
         self._profiles = profiles

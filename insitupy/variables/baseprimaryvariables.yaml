@@ -13,6 +13,7 @@ DENSITY:
   map_from:
   - density
   - density_mean
+  - avg_density
   match_on_code: true
 DENSITY_A:
   auto_remap: false

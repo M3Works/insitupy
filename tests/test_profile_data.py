@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from insitupy.campaigns.snowex import SnowExProfileData
+from insitupy.variables.base_variables import InputMappingError
 from . import BASE_PRIMARY_VARIABLES
 
 
@@ -32,18 +33,18 @@ class TestSnowexPitProfile:
     @pytest.mark.parametrize(
         "fname, variable", [
             (
-                "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY"]
-            ),
-            (
-                "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
+                "Density_file_unmapped.csv",
                 BASE_PRIMARY_VARIABLES.entries["DENSITY"]
             ),
         ]
     )
     def test_read_fails_mapping_error(self, fname, variable, data_path):
+        """
+        Test that we fail to map a column in the column names when
+        we expect them all to be mapped
+        """
         file_path = data_path.joinpath(fname)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(InputMappingError):
             SnowExProfileData.from_csv(
                 file_path, variable, allow_map_failures=False
             )

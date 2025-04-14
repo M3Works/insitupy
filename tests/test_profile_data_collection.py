@@ -1,13 +1,8 @@
 import pytest
 import numpy as np
 
-from insitupy.campaigns import ProfileDataCollection
-from insitupy.campaigns.snowex import SnowExProfileData
+from insitupy.campaigns.snowex import SnowExProfileDataCollection
 from . import BASE_PRIMARY_VARIABLES
-
-
-class DataCollectionExtended(ProfileDataCollection):
-    PROFILE_DATA_CLASS = SnowExProfileData
 
 
 @pytest.mark.parametrize(
@@ -19,11 +14,12 @@ class DataCollectionExtended(ProfileDataCollection):
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
             [
+                BASE_PRIMARY_VARIABLES.entries["DENSITY"],
                 BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_A"],
                 BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_B"],
                 BASE_PRIMARY_VARIABLES.entries["LWC_A"],
                 BASE_PRIMARY_VARIABLES.entries["LWC_B"],
-            ], [np.nan, np.nan, np.nan, np.nan]
+            ], [395.03703703703707, np.nan, np.nan, np.nan, np.nan]
         ),
         (
             "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
@@ -40,7 +36,7 @@ class TestProfileDataCollection:
     @pytest.fixture
     def obj(self, fname, data_path):
         file_path = data_path.joinpath(fname)
-        obj = DataCollectionExtended.from_csv(
+        obj = SnowExProfileDataCollection.from_csv(
             file_path, allow_map_failure=True
         )
         return obj

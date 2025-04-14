@@ -16,6 +16,7 @@ requirements = [
     "numpy<2.0",
     "attrs>=24.2.0,<25.0",
     "PyYAML>=6.0.2,<7.0",
+    "pydash>=8.0.5",
 ]
 
 test_requirements = ['pytest>=3', ]
@@ -30,9 +31,9 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     description="Weave insitu data together",
     entry_points={

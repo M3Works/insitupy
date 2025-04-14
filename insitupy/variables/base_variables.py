@@ -1,13 +1,18 @@
-import inspect
 import logging
 import os.path
-from dataclasses import dataclass
 from typing import List, Tuple, Dict
 import attrs
 import pydash
 import yaml
 
 LOG = logging.getLogger(__name__)
+
+
+class InputMappingError(RuntimeError):
+    """
+    Indicate we failed to map a column or header name
+    """
+    pass
 
 
 # Similar to MeasurementDescription from metloom
@@ -120,7 +125,9 @@ class ExtendableVariables:
                 result = input_name
                 column_mapping[result] = None
             else:
-                raise RuntimeError(f"Could not find mapping for {input_name}")
+                raise InputMappingError(
+                    f"Could not find mapping for {input_name}"
+                )
         LOG.debug(
             f"Mapping {result} to {result} (type {column_mapping[result]})"
         )

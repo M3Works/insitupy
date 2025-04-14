@@ -43,7 +43,8 @@ Example
 -------
 I want to read in a file that looks like this:
 
-.. code-block:: csv
+::
+
     # Location,East River
     # Date/Local Standard Time,2020-04-27T08:45
     # Latitude,38.92524
@@ -54,8 +55,25 @@ I want to read in a file that looks like this:
     85.0,75.0,449.0
     75.0,65.0,472.0
 
+The metadata and data parsers are configured with a lot of defaults
+for working with SnowEx data, so the simple approach is
+
+.. code-block:: python
+
+    from insitupy.campaigns.snowex import SnowExProfileData
+    my_data = SnowExProfileDataCollection.from_csv(
+        "./fake_data.csv", allow_map_failure=True
+    )
+    print(my_data.profiles[0].df)
+    print(my_data.profiles[0].metadata)
+
+If you want to try your hand at defining variables yourself, you can do
+as follows:
+
 I can define a `metadata` file that looks like this:
-.. code-block:: yaml
+
+::
+
     LATITUDE:
       auto_remap: true
       code: latitude
@@ -80,7 +98,7 @@ I can define a `metadata` file that looks like this:
       - Date/Local Standard Time
       - date/local_standard_time
       - datetime
-      - date&time
+      - "date&time"
       - date/time
       - date/local_time
       match_on_code: true
@@ -90,10 +108,12 @@ I can define a `metadata` file that looks like this:
       description: Name of campaign site
       map_from:
           - location
-  match_on_code: true
+      match_on_code: true
 
 and a primary variable file like:
-.. code-block:: yaml
+
+::
+
     BOTTOM_DEPTH:
       auto_remap: true
       code: bottom_depth
@@ -118,19 +138,32 @@ and a primary variable file like:
       - depth
       - top
       match_on_code: true
+    LAYER_THICKNESS:
+      auto_remap: true
+      code: layer_thickness
+      description: thickness of layer
+      map_from: null
+      match_on_code: true
+
+
+.. important::
+
+    LAYER_THICKNESS, DEPTH, and BOTTOM_DEPTH are required variables
+    for reading in **profile** data
 
 Then read in the file like this:
 
 .. code-block:: python
 
-    from insitupy.profiles import ProfileData
-    from insitupy.variables import ExtendableVariables
-    my_vars = ExtendableVariables(["<primary_variables_file>"])
-    my_data = ProfileData(
-
+    from insitupy.campaigns.snowex import SnowExProfileData
+    my_data = SnowExProfileDataCollection.from_csv(
+        "./fake_data.csv", allow_map_failure=True,
+        # Use the files YOU defined here
+        primary_variable_files=["../primaryvariables.yaml"],
+        metadata_variable_files=["../metadatavariables.yaml"],
     )
-    # TODO this
-    # TODO: what columns are required?
+    print(my_data.profiles[0].df)
+    print(my_data.profiles[0].metadata)
 
 
 Variables
