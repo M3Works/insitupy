@@ -1,8 +1,9 @@
 import pandas as pd
 import pytest
 import pytz
-from insitupy.io.dates import DateManager
 from sqlalchemy.testing import assert_raises
+
+from insitupy.io.dates import DateManager
 
 in_timezone = 'US/Mountain'
 out_timezone = 'UTC'
@@ -12,15 +13,18 @@ out_timezone = 'UTC'
 def test_date():
     return pd.to_datetime('2025-04-01')
 
+
 class TestDates:
     # TODO: Cover GPR dates logic
 
     def test_separate_date_and_time(self):
-        date = DateManager.handle_separate_datetime({
-            'date': '2025-04-01',
-            'time': '12:00',
-            'header1': 'value1',
-        })
+        date = DateManager.handle_separate_datetime(
+            {
+                'date': '2025-04-01',
+                'time': '12:00',
+                'header1': 'value1',
+            }
+        )
         assert type(date), pd.DatetimeIndex
         assert date.year == 2025
         assert date.month == 4
@@ -84,13 +88,15 @@ class TestDates:
             ValueError, DateManager.handle_separate_datetime, {}
         )
 
-    #=========================#
-    # Method: adjust_timezone #
-    #=========================#
+    # ========================= #
+    # Method: adjust_timezone   #
+    # ========================= #
 
     def test_adjust_timezone_date_with_no_zone(self, test_date):
-        assert test_date.tz == None
-        date = DateManager.adjust_timezone(test_date, in_timezone, out_timezone)
+        assert test_date.tz is None
+        date = DateManager.adjust_timezone(
+            test_date, in_timezone, out_timezone
+        )
         assert date.tz.zone == out_timezone
         # Should have shifted the hours. Not testing for exactness to make
         # the test safe against running on machines in different locations
@@ -98,7 +104,9 @@ class TestDates:
 
     def test_adjust_timezone_date_with_zone(self, test_date):
         test_date = test_date.tz_localize(pytz.timezone('US/Mountain'))
-        date = DateManager.adjust_timezone(test_date, in_timezone, out_timezone)
+        date = DateManager.adjust_timezone(
+            test_date, in_timezone, out_timezone
+        )
         assert date.tz.zone == out_timezone
 
     def test_adjust_timezone_no_in_zone(self, test_date):
