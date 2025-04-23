@@ -1,6 +1,6 @@
 import logging
 import os.path
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 import attrs
 import pydash
 import yaml
@@ -89,7 +89,7 @@ class ExtendableVariables:
     ) -> Tuple[str, Dict[str, MeasurementDescription]]:
         """
         Get the measurement description from an input name.
-        This will use the  MeasurementDescription.map_from list to
+        This will use the MeasurementDescription.map_from list to
         check, in order, which variable we should use
 
         Args:
@@ -102,6 +102,7 @@ class ExtendableVariables:
         """
         lower_name = input_name.lower()
         result = None
+
         # Map column name to variable type
         column_mapping = {}
         for entry in self.variables:
@@ -118,6 +119,7 @@ class ExtendableVariables:
                 # store a map of the column name to the variable description
                 column_mapping[result] = entry
                 break
+
         if result is None:
             if allow_failure:
                 # We failed to find a mapping, but want to continue

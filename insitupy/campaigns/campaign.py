@@ -5,10 +5,10 @@ import logging
 from typing import List
 
 import pandas as pd
+
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
-from insitupy.variables import MeasurementDescription, ExtendableVariables
-
+from insitupy.variables import ExtendableVariables, MeasurementDescription
 
 SOURCES = [
     "https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_SSA.001/",
@@ -34,8 +34,6 @@ class ProfileDataCollection:
     """
     META_PARSER = MetaDataParser
     PROFILE_DATA_CLASS = ProfileData
-    DEFAULT_METADATA_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES
-    DEFAULT_PRIMARY_VARIABLE_FILES = PROFILE_DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
 
     def __init__(self, profiles: List[ProfileData], metadata: ProfileMetaData):
         self._profiles = profiles
@@ -44,9 +42,9 @@ class ProfileDataCollection:
     @property
     def SWE(self):
         """
-        Takes all layers for each unique date, location and returns point swe
-        geodataframe
-        We can iterate though all ProfileData in this class and get SWE DF for each
+        Takes all layers for each unique date and location and returns point
+        swe geo-dataframe. We can iterate though all ProfileData in this class
+        and get SWE DF for each
         """
         # find all points with variable == density and calc SWE
         pass
@@ -70,8 +68,13 @@ class ProfileDataCollection:
 
     @classmethod
     def _read_csv(
-        cls, fname, columns, column_mapping, header_pos,
-        metadata: ProfileMetaData, meta_parser: MetaDataParser,
+        cls,
+        fname,
+        columns,
+        column_mapping,
+        header_pos,
+        metadata: ProfileMetaData,
+        meta_parser: MetaDataParser,
         shared_column_options=None,
         allow_map_failures=False
     ) -> List[ProfileData]:
@@ -84,8 +87,8 @@ class ProfileDataCollection:
             metadata: metadata for each object
             meta_parser: metadata parser object
             shared_column_options: shared columns that will be used
-                for data handling and storing. These come from primary variables,
-                but are not the primary data themselves
+                for data handling and storing. These come from primary
+                variables, but are not the primary data themselves
 
         Returns:
             a list of ProfileData objects
@@ -144,9 +147,15 @@ class ProfileDataCollection:
 
     @classmethod
     def from_csv(
-        cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
-        campaign_name=None, allow_map_failure=False,
-        metadata_variable_files=None, primary_variable_files=None
+        cls,
+        fname,
+        timezone="US/Mountain",
+        header_sep=",",
+        site_id=None,
+        campaign_name=None,
+        allow_map_failure=False,
+        metadata_variable_files=None,
+        primary_variable_files=None
     ):
         """
         Find all profiles in a single csv file
@@ -165,26 +174,34 @@ class ProfileDataCollection:
             This class with a collection of profiles and metadata
         """
         # TODO: timezone here (mapped from site?)
-        # parse mlutiple files and create an iterable of ProfileData
+        # parse multiple files and create an iterable of ProfileData
         primary_variable_files = primary_variable_files or \
-            cls.DEFAULT_PRIMARY_VARIABLE_FILES
+            cls.PROFILE_DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
         metadata_variable_files = metadata_variable_files or \
-            cls.DEFAULT_METADATA_VARIABLE_FILES
+            cls.PROFILE_DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES
 
         meta_parser = cls.META_PARSER(
-            fname, timezone,
+            fname,
+            timezone,
             ExtendableVariables(entries=primary_variable_files),
             ExtendableVariables(entries=metadata_variable_files),
-            header_sep=header_sep, _id=site_id,
-            campaign_name=campaign_name, allow_map_failures=allow_map_failure,
+            header_sep=header_sep,
+            _id=site_id,
+            campaign_name=campaign_name,
+            allow_map_failures=allow_map_failure,
             allow_split_lines=True
         )
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()
         # read in the actual data
         profiles = cls._read_csv(
-            fname, columns, columns_map, header_pos, metadata,
-            meta_parser, allow_map_failures=allow_map_failure
+            fname,
+            columns,
+            columns_map,
+            header_pos,
+            metadata,
+            meta_parser,
+            allow_map_failures=allow_map_failure
         )
 
         # ignore profiles with the name 'ignore'
