@@ -305,8 +305,8 @@ class ProfileData(MeasurementData):
                     "LAYER_THICKNESS"
                 ].code
             ] = (
-                    self._df[self._depth_layer.code] -
-                    self._df[self._lower_depth_layer.code]
+                self._df[self._depth_layer.code] -
+                self._df[self._lower_depth_layer.code]
             )
 
     @property

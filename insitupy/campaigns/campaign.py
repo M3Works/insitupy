@@ -9,8 +9,6 @@ import pandas as pd
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
 from insitupy.variables import ExtendableVariables, MeasurementDescription
-from insitupy.variables import MeasurementDescription, ExtendableVariables
-
 
 SOURCES = [
     "https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_SSA.001/",

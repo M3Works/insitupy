@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union
+from typing import List
 
 import pandas as pd
 
