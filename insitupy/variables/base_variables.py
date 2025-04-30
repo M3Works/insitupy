@@ -1,9 +1,10 @@
 import logging
 import os.path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 import attrs
 import pydash
 import yaml
+from pathlib import Path
 
 LOG = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ class MeasurementDescription:
     cast_type = None  # make this float, int, etc
 
 
-def variable_from_input(x: list[str]):
+def variable_from_input(x: list[Union[str, Path]]):
     """
     Get all the variables from a set of files
     Args:
@@ -46,6 +47,7 @@ def variable_from_input(x: list[str]):
     Returns:
         list of variables
     """
+    # TODO: better logic here
     if isinstance(x, list) and all(os.path.isfile(f) for f in x):
         data_final = {}
         # If we have a list of files, we need to import them
@@ -55,7 +57,11 @@ def variable_from_input(x: list[str]):
             # Merge, overwriting options with second
             pydash.merge(data_final, data)
         return {k: MeasurementDescription(**v) for k, v in data_final.items()}
-    # Assume properly formatted list
+    # Check that we have a dict
+    if not isinstance(x, dict):
+        raise TypeError(
+            f"Expected to formulate dict, got {type(x)} with value {x}"
+        )
     return x
 
 
