@@ -1,7 +1,6 @@
 import pandas as pd
 import pytest
 import pytz
-from sqlalchemy.testing import assert_raises
 
 from insitupy.io.dates import DateManager
 
@@ -84,10 +83,8 @@ class TestDates:
         assert date.minute == 0
 
     def test_separate_date_no_date(self):
-        assert_raises(
-            ValueError, DateManager.handle_separate_datetime, {}
-        )
-
+        with pytest.raises(ValueError):
+            DateManager.handle_separate_datetime({})
     # ========================= #
     # Method: adjust_timezone   #
     # ========================= #
@@ -110,9 +107,8 @@ class TestDates:
         assert date.tz.zone == out_timezone
 
     def test_adjust_timezone_no_in_zone(self, test_date):
-        assert_raises(
-            ValueError,
-            DateManager.adjust_timezone,
-            date=test_date,
-            out_timezone=out_timezone
-        )
+        with pytest.raises(ValueError):
+            DateManager.adjust_timezone(
+                date=test_date,
+                out_timezone=out_timezone
+            )

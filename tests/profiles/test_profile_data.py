@@ -1,4 +1,4 @@
-from profiles.base import MeasurementData, ProfileData
+from insitupy.profiles.base import MeasurementData, ProfileData
 from tests.test_helpers import yaml_file_in_list
 
 
