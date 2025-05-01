@@ -40,7 +40,7 @@ SITE_NAME:
   - location
   match_on_code: true
 TIME:
-  auto_remap: false
+  auto_remap: true
   code: time
   description: Measurement time
   map_from:
