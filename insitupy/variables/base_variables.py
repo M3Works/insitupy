@@ -85,6 +85,7 @@ class ExtendableVariables:
         factory=dict,
         converter=attrs.Converter(variable_from_input)
     )
+    allow_map_failures: bool = False
 
     @property
     def variables(self):
@@ -102,7 +103,7 @@ class ExtendableVariables:
         return len(self.entries)
 
     def from_mapping(
-        self, input_name, allow_failure=False
+        self, input_name
     ) -> Tuple[str, Dict[str, MeasurementDescription]]:
         """
         Get the measurement description from an input name.
@@ -137,7 +138,7 @@ class ExtendableVariables:
                 break
 
         if result is None:
-            if allow_failure:
+            if self.allow_map_failures:
                 # We failed to find a mapping, but want to continue
                 LOG.warning(f"Could not find mapping for {input_name}")
                 result = input_name
