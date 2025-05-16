@@ -111,3 +111,7 @@ class LocationManager:
             return int(f"{YamlCodes.UTM_EPSG_PREFIX}{utm_zone}")
         elif YamlCodes.EPSG in headers.keys():
             return int(headers[YamlCodes.EPSG])
+        else:
+            raise ValueError(
+                f"Could not find UTM keys in headers: {headers.keys()}"
+            )
