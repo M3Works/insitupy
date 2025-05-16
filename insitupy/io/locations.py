@@ -1,6 +1,7 @@
 import logging
-import utm
 from typing import Tuple
+
+import utm
 
 from .yaml_codes import YamlCodes
 
@@ -99,7 +100,7 @@ class LocationManager:
         return lat, lon, easting, northing
 
     @classmethod
-    def parse_utm_epsg(cls, headers: dict) -> int | None:
+    def parse_utm_epsg(cls, headers: dict) -> int:
         # TODO: headers based utm?
         if YamlCodes.UTM_ZONE in headers.keys():
             utm_zone = int(
