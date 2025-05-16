@@ -49,31 +49,39 @@ class MeasurementDescription:
     cast_type: str = None
 
 
-def variable_from_input(x: list[Union[str, Path]]):
+def variable_from_input(files: list[Union[str, Path]], self_):
     """
-    Get all the variables from a set of files
+    Parses list of YAML files that have primary or metadata variable
+    definitions.
+
     Args:
-        x: input
+        files (list[Union[str, Path]] | dict): List of files to parse.
+        self_: The instance of the initialized ExtendableVariables class.
 
     Returns:
-        list of variables
+        dict: A dictionary with parsed MeasurementDescription objects.
+
+    Raises:
+        TypeError: If the input `x` is neither a list of files nor a valid
+        dictionary.
     """
     # TODO: better logic here
-    if isinstance(x, list) and all(os.path.isfile(f) for f in x):
+    if isinstance(files, list) and all(os.path.isfile(f) for f in files):
         data_final = {}
         # If we have a list of files, we need to import them
-        for f in x:
+        for f in files:
+            self_.source_files = self_.source_files + [str(f)]
             with open(f) as fp:
                 data = yaml.safe_load(fp)
             # Merge, overwriting options with second
             pydash.merge(data_final, data)
         return {k: MeasurementDescription(**v) for k, v in data_final.items()}
     # Check that we have a dict
-    if not isinstance(x, dict):
+    if not isinstance(files, dict):
         raise TypeError(
-            f"Expected to formulate dict, got {type(x)} with value {x}"
+            f"Expected to formulate dict, got {type(files)} with value {files}"
         )
-    return x
+    return files
 
 
 @attrs.define
@@ -81,9 +89,10 @@ class ExtendableVariables:
     """
     Make a class with the helpful iterator for storing variable options
     """
+    source_files: list[str] = []
     entries: dict[str, MeasurementDescription] = attrs.field(
         factory=dict,
-        converter=attrs.Converter(variable_from_input)
+        converter=attrs.Converter(variable_from_input, takes_self=True)
     )
     allow_map_failures: bool = False
 

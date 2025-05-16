@@ -2,8 +2,9 @@
 
 import pytest
 
-from insitupy.variables.base_variables import ExtendableVariables, \
-    InputMappingError, MeasurementDescription
+from insitupy.variables import ExtendableVariables, MeasurementDescription, \
+    base_primary_variables_yaml
+from insitupy.variables.base_variables import InputMappingError
 
 
 @pytest.fixture
@@ -74,6 +75,28 @@ class TestExtendableVariables:
         result, mapping = ev.from_mapping("unknown_variable")
         assert result == "unknown_variable"
         assert mapping[result] is None
+
+    def test_source_files(self, tmp_path):
+        overwrites = tmp_path / "overwrites.yaml"
+        overwrites.write_text("TEMP:\n  description: Overwritten description")
+        ev = ExtendableVariables(
+            entries=[base_primary_variables_yaml, overwrites],
+            allow_map_failures=True
+        )
+        assert len(ev.source_files) == 2
+        assert str(overwrites) in ev.source_files
+        assert str(base_primary_variables_yaml) in ev.source_files
+
+        # Make sure we properly append the file entries to the list of files
+        # and don't maintain old entries between new object instances
+        overwrites = tmp_path / "overwrites_2.yaml"
+        overwrites.write_text("TEMP:\n  description: Overwritten description")
+        ev = ExtendableVariables(
+            entries=[overwrites],
+            allow_map_failures=True
+        )
+        assert len(ev.source_files) == 1
+        assert ev.source_files == [str(overwrites)]
 
     def test_to_dict(self, extendable_variables_fixture):
         result = extendable_variables_fixture.to_dict()
