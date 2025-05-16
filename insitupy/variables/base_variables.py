@@ -1,10 +1,12 @@
 import logging
 import os.path
+from pathlib import Path
 from typing import Dict, List, Tuple, Union
+
 import attrs
 import pydash
 import yaml
-from pathlib import Path
+from attrs import field, validators
 
 LOG = logging.getLogger(__name__)
 
@@ -30,12 +32,21 @@ class MeasurementDescription:
         match_on_code: Match on the code too
         cast_type: make this float, int, etc
     """
-    code: str = "-1"  # code used within the applicable API
-    description: str = None  # description of the sensor
-    map_from: List = None  # map to this variable from a list of options
-    auto_remap: bool = False  # Auto remap to the column to the code
-    match_on_code: bool = True  # Match on the code too
-    cast_type = None  # make this float, int, etc
+    # Code used within the applicable API
+    code: str = field(default='-1', validator=validators.instance_of(str))
+    # Description of the measurement
+    description: str = None
+    # Map to this variable from a list of options
+    map_from: List = field(
+        default=[],
+        validator=attrs.validators.optional(validators.instance_of(List))
+    )
+    # Auto remap the column to the code
+    auto_remap: bool = False
+    # Match on the code too
+    match_on_code: bool = True
+    # Optional value type casting
+    cast_type: str = None
 
 
 def variable_from_input(x: list[Union[str, Path]]):
@@ -100,7 +111,6 @@ class ExtendableVariables:
 
         Args:
             input_name: string input name
-            allow_failure: return the original name if we fail
 
         Returns:
             column name
