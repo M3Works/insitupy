@@ -18,6 +18,8 @@ class MetaDataParser:
     Base class for parsing metadata
     """
     OUT_TIMEZONE = "UTC"
+    DEFAULT_HEADER_SEPARATOR = ","
+    DEFAULT_HEADER_LINE_START = '#'
 
     def __init__(
         self,
@@ -26,6 +28,7 @@ class MetaDataParser:
         primary_variables: ExtendableVariables,
         metadata_variables: ExtendableVariables,
         header_sep=",",
+        header_sep=DEFAULT_HEADER_SEPARATOR,
         allow_split_lines=False,
         allow_map_failures=False,
         _id=None,
@@ -169,27 +172,25 @@ class MetaDataParser:
             d = ln.split(self._header_sep)
 
             # Key is always the first entry in comma sep list
-            k = StringManager.standardize_key(d[0])
+            key = StringManager.standardize_key(d[0])
 
             # Avoid splitting on times
-            if 'time' in k or 'date' in k:
+            if 'time' in key or 'date' in key:
                 value = ':'.join(d[1:]).strip()
             else:
                 value = ', '.join(d[1:])
                 value = StringManager.clean_str(value)
 
             # cast the rough object key to a known key
-            known_name, k_mapping = self.metadata_variables.from_mapping(
-                k, allow_failure=self._allow_map_failures
-            )
+            known_name, k_mapping = self.metadata_variables.from_mapping(key)
 
             # Assign non-empty strings to dictionary
-            if k and value:
+            if key and value:
                 data[known_name] = value.strip(
                     ' '
                 ).replace('"', '').replace('  ', ' ')
 
-            elif k and not value:
+            elif key and not value:
                 data[known_name] = None
         return data
 
@@ -261,16 +262,22 @@ class MetaDataParser:
         # for c in ['()', '[]']:
         #     str_line = StringManager.strip_encapsulated(str_line, c)
 
-        raw_cols = str_line.strip('#').split(',')
+        raw_cols = str_line.strip(
+            self.DEFAULT_HEADER_LINE_START
+        ).split(
+            self._header_sep
+        )
         # Clean the raw columns
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
         # Infer units from the raw columns
-        infered_units = [StringManager.infer_unit_from_key(c) for c in raw_cols]
+        inferred_units = [
+            StringManager.infer_unit_from_key(c) for c in raw_cols
+        ]
         final_cols = []
         final_col_map = {}
         inferred_units_map = {}
         # Iterate through the columns and map to desired result
-        for c, unit in zip(standard_cols, infered_units):
+        for column, unit in zip(standard_cols, inferred_units):
             # TODO: could we return unmapped columns here?
             mapped_col, col_map = self.primary_variables.from_mapping(
                 c, allow_failure=self._allow_map_failures
@@ -283,11 +290,11 @@ class MetaDataParser:
             # Store the map of column name to inferred unit
             result_obj = col_map[mapped_col]
             if result_obj is None:
-                if self._allow_map_failures:
-                    LOG.warning(f"No unit for {c}")
+                if self.primary_variables.allow_map_failures:
+                    LOG.warning(f"No unit for {column}")
                 else:
                     raise RuntimeError(
-                        f"No unit for {c} - column mapping has failed"
+                        f"No unit for {column} - column mapping has failed"
                     )
             else:
                 inferred_units_map[result_obj.code] = unit
@@ -351,7 +358,7 @@ class MetaDataParser:
         final_lines = [ln.strip() for ln in final_lines]
         # Join all data and split on header separator
         # This handles combining split lines
-        str_data = " ".join(final_lines).split('#')
+        str_data = " ".join(final_lines).split(self.DEFAULT_HEADER_LINE_START)
         str_data = [ln.strip() for ln in str_data if ln]
 
         return str_data, columns, columns_map, header_pos
@@ -401,8 +408,8 @@ class MetaDataParser:
         # #2)
         n_columns = len(lines[-1].split(','))
 
-        if lines[0][0] == '#':
-            header_indicator = '#'
+        if lines[0][0] == self.DEFAULT_HEADER_LINE_START:
+            header_indicator = self.DEFAULT_HEADER_LINE_START
         else:
             header_indicator = None
 
