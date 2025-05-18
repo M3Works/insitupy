@@ -76,9 +76,8 @@ class TestExtendableVariables:
         assert result == "unknown_variable"
         assert mapping[result] is None
 
-    def test_source_files(self, tmp_path):
-        overwrites = tmp_path / "overwrites.yaml"
-        overwrites.write_text("TEMP:\n  description: Overwritten description")
+    def test_source_files(self, yaml_variable_file):
+        overwrites = yaml_variable_file('overwrites.yaml')
         ev = ExtendableVariables(
             entries=[base_primary_variables_yaml, overwrites],
             allow_map_failures=True
@@ -89,8 +88,7 @@ class TestExtendableVariables:
 
         # Make sure we properly append the file entries to the list of files
         # and don't maintain old entries between new object instances
-        overwrites = tmp_path / "overwrites_2.yaml"
-        overwrites.write_text("TEMP:\n  description: Overwritten description")
+        overwrites = yaml_variable_file('overwrites_2.yaml')
         ev = ExtendableVariables(
             entries=[overwrites],
             allow_map_failures=True
