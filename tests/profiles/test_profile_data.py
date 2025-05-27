@@ -20,7 +20,7 @@ class TestProfileData:
 
         assert [] == profile_data._measurements_to_keep
         assert [] == profile_data._non_measure_columns
-        assert False == profile_data._has_layers
+        assert profile_data._has_layers is False
 
     def test_init_with_custom_arguments(self):
         variable = MeasurementDescription(

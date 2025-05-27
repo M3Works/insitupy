@@ -4,8 +4,6 @@ Point data from select manual measurement campaigns
 import logging
 from typing import List, Tuple
 
-import pandas as pd
-
 from insitupy.io.metadata import MetaDataParser, ProfileMetaData
 from insitupy.profiles.base import ProfileData
 from insitupy.variables import MeasurementDescription
