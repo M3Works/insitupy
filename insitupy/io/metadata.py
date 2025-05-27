@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 
 import pandas as pd
 
@@ -29,15 +29,15 @@ class MetaDataParser:
 
     def __init__(
         self,
-        timezone: str | None = OUT_TIMEZONE,
-        primary_variable_file: str | Path = None,
-        metadata_variable_file: str | Path = None,
+        timezone: Optional[str] = OUT_TIMEZONE,
+        primary_variable_file: Optional[Union[str, Path]] = None,
+        metadata_variable_file: Optional[Union[str, Path]] = None,
         header_sep=DEFAULT_HEADER_SEPARATOR,
-        allow_split_lines=False,
-        allow_map_failures=False,
-        _id=None,
-        campaign_name=None,
-        units_map=None
+        allow_split_lines: bool = False,
+        allow_map_failures: bool = False,
+        _id: Optional[str] = None,
+        campaign_name: Optional[str] = None,
+        units_map: Optional[dict] = None
     ):
         """
         Args:
@@ -81,7 +81,7 @@ class MetaDataParser:
     @staticmethod
     def extend_variables(
         default: list,
-        additions: str | Path = None,
+        additions: Optional[Union[str, Path]] = None,
         allow_map_failures: bool = False
     ) -> ExtendableVariables:
         """

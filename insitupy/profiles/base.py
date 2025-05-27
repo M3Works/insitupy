@@ -4,6 +4,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
+from typing import Union
+
 from insitupy.io.metadata import MetaDataParser
 from insitupy.variables import MeasurementDescription
 
@@ -131,7 +133,7 @@ class MeasurementData:
             self._format_df()
 
     @property
-    def columns(self) -> np.ndarray | None:
+    def columns(self) -> Union[np.ndarray, None]:
         """
         Gets the column names of the DataFrame if the DataFrame is not None.
 
