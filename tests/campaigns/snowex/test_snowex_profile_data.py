@@ -3,107 +3,125 @@ import pytest
 
 from insitupy.campaigns.snowex import SnowExProfileData
 from insitupy.variables.base_variables import InputMappingError
-from . import BASE_PRIMARY_VARIABLES
 
 
 class TestSnowexPitProfile:
     """
     Test the attributes of the profile
     """
-
     @pytest.mark.parametrize(
-        "fname, variable", [
+        "filename, variable", [
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY"]
+                "PERMITTIVITY"
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["DENSITY"]
+                "DENSITY"
             ),
         ]
     )
-    def test_read_fails(self, fname, variable, data_path):
-        file_path = data_path.joinpath(fname)
+    def test_read_fails(
+        self, filename, variable, data_path, base_primary_variables
+    ):
+        file_path = data_path.joinpath(filename)
         with pytest.raises(ValueError):
-            SnowExProfileData.from_csv(
-                file_path, variable, allow_map_failures=True
+            SnowExProfileData(
+                base_primary_variables.entries[variable],
+            ).from_csv(
+                file_path
             )
 
     @pytest.mark.parametrize(
-        "fname, variable", [
+        "filename, variable", [
             (
                 "Density_file_unmapped.csv",
-                BASE_PRIMARY_VARIABLES.entries["DENSITY"]
+                "DENSITY"
             ),
         ]
     )
-    def test_read_fails_mapping_error(self, fname, variable, data_path):
+    def test_read_fails_mapping_error(
+        self, filename, variable, data_path, base_primary_variables
+    ):
         """
         Test that we fail to map a column in the column names when
         we expect them all to be mapped
         """
-        file_path = data_path.joinpath(fname)
+        file_path = data_path.joinpath(filename)
         with pytest.raises(InputMappingError):
-            SnowExProfileData.from_csv(
-                file_path, variable, allow_map_failures=False
+            SnowExProfileData(
+                base_primary_variables.entries[variable],
+            ).from_csv(
+                file_path
             )
 
     @pytest.mark.parametrize(
-        "fname, variable, expected", [
+        "filename, variable, expected", [
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["SNOW_TEMPERATURE"], 0.0
+                "SNOW_TEMPERATURE",
+                0.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["LWC_A"], np.nan
+                "LWC_A",
+                np.nan
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_A"], np.nan
+                "PERMITTIVITY_A",
+                np.nan
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["DENSITY_A"], 397.8888888
+                "DENSITY_A",
+                397.8888888
             ),
         ]
     )
-    def test_mean(self, fname, variable, expected, data_path):
-        file_path = data_path.joinpath(fname)
-        obj = SnowExProfileData.from_csv(
-            file_path, variable, allow_map_failures=True
-        )
+    def test_mean(
+        self, filename, variable, expected, data_path, base_primary_variables
+    ):
+        file_path = data_path.joinpath(filename)
+        obj = SnowExProfileData(base_primary_variables.entries[variable])
+        obj.from_csv(file_path)
         result = obj.mean
+
         if np.isnan(expected):
             assert np.isnan(result)
         else:
             assert result == pytest.approx(expected)
 
     @pytest.mark.parametrize(
-        "fname, variable, expected", [
+        "filename, variable, expected", [
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_temperature_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["SNOW_TEMPERATURE"], 95.0
+                "SNOW_TEMPERATURE",
+                95.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["LWC_A"], 95.0
+                "LWC_A",
+                95.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_LWC_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["PERMITTIVITY_B"], 95.0
+                "PERMITTIVITY_B",
+                95.0
             ),
             (
                 "SNEX20_TS_SP_20200427_0845_COERAP_data_density_v01.csv",
-                BASE_PRIMARY_VARIABLES.entries["DENSITY_A"], 95.0
+                "DENSITY_A",
+                95.0
             ),
         ]
     )
-    def test_total_depth(self, fname, variable, expected, data_path):
-        file_path = data_path.joinpath(fname)
-        obj = SnowExProfileData.from_csv(
-            file_path, variable, allow_map_failures=True
-        )
+    def test_total_depth(
+        self, filename, variable, expected, data_path, base_primary_variables
+    ):
+        file_path = data_path.joinpath(filename)
+        obj = SnowExProfileData(base_primary_variables.entries[variable])
+        obj.from_csv(file_path)
         result = obj.total_depth
+
         assert result == pytest.approx(expected)
