@@ -1,10 +1,12 @@
 import logging
 import os.path
+from pathlib import Path
 from typing import Dict, List, Tuple, Union
+
 import attrs
 import pydash
 import yaml
-from pathlib import Path
+from attrs import field, validators
 
 LOG = logging.getLogger(__name__)
 
@@ -30,39 +32,56 @@ class MeasurementDescription:
         match_on_code: Match on the code too
         cast_type: make this float, int, etc
     """
-    code: str = "-1"  # code used within the applicable API
-    description: str = None  # description of the sensor
-    map_from: List = None  # map to this variable from a list of options
-    auto_remap: bool = False  # Auto remap to the column to the code
-    match_on_code: bool = True  # Match on the code too
-    cast_type = None  # make this float, int, etc
+    # Code used within the applicable API
+    code: str = field(default='-1', validator=validators.instance_of(str))
+    # Description of the measurement
+    description: str = None
+    # Map to this variable from a list of options
+    map_from: List = field(
+        default=[],
+        validator=attrs.validators.optional(validators.instance_of(List))
+    )
+    # Auto remap the column to the code
+    auto_remap: bool = False
+    # Match on the code too
+    match_on_code: bool = True
+    # Optional value type casting
+    cast_type: str = None
 
 
-def variable_from_input(x: list[Union[str, Path]]):
+def variable_from_input(files: list[Union[str, Path]], self_):
     """
-    Get all the variables from a set of files
+    Parses list of YAML files that have primary or metadata variable
+    definitions.
+
     Args:
-        x: input
+        files (list[Union[str, Path]] | dict): List of files to parse.
+        self_: The instance of the initialized ExtendableVariables class.
 
     Returns:
-        list of variables
+        dict: A dictionary with parsed MeasurementDescription objects.
+
+    Raises:
+        TypeError: If the input `x` is neither a list of files nor a valid
+        dictionary.
     """
     # TODO: better logic here
-    if isinstance(x, list) and all(os.path.isfile(f) for f in x):
+    if isinstance(files, list) and all(os.path.isfile(f) for f in files):
         data_final = {}
         # If we have a list of files, we need to import them
-        for f in x:
+        for f in files:
+            self_.source_files = self_.source_files + [str(f)]
             with open(f) as fp:
                 data = yaml.safe_load(fp)
             # Merge, overwriting options with second
             pydash.merge(data_final, data)
         return {k: MeasurementDescription(**v) for k, v in data_final.items()}
     # Check that we have a dict
-    if not isinstance(x, dict):
+    if not isinstance(files, dict):
         raise TypeError(
-            f"Expected to formulate dict, got {type(x)} with value {x}"
+            f"Expected to formulate dict, got {type(files)} with value {files}"
         )
-    return x
+    return files
 
 
 @attrs.define
@@ -70,10 +89,12 @@ class ExtendableVariables:
     """
     Make a class with the helpful iterator for storing variable options
     """
+    source_files: list[str] = []
     entries: dict[str, MeasurementDescription] = attrs.field(
         factory=dict,
-        converter=attrs.Converter(variable_from_input)
+        converter=attrs.Converter(variable_from_input, takes_self=True)
     )
+    allow_map_failures: bool = False
 
     @property
     def variables(self):
@@ -91,7 +112,7 @@ class ExtendableVariables:
         return len(self.entries)
 
     def from_mapping(
-        self, input_name, allow_failure=False
+        self, input_name
     ) -> Tuple[str, Dict[str, MeasurementDescription]]:
         """
         Get the measurement description from an input name.
@@ -100,7 +121,6 @@ class ExtendableVariables:
 
         Args:
             input_name: string input name
-            allow_failure: return the original name if we fail
 
         Returns:
             column name
@@ -127,7 +147,7 @@ class ExtendableVariables:
                 break
 
         if result is None:
-            if allow_failure:
+            if self.allow_map_failures:
                 # We failed to find a mapping, but want to continue
                 LOG.warning(f"Could not find mapping for {input_name}")
                 result = input_name

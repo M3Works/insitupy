@@ -2,22 +2,15 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-from insitupy.profiles.base import ProfileData, standardize_depth
-from insitupy.variables import base_metadata_variables_yaml, \
-    base_primary_variables_yaml
 
-from .variables import (snowex_metadata_yaml, snowex_variables_yaml)
+from insitupy.campaigns.snowex import SnowExMetaDataParser
+from insitupy.profiles.base import ProfileData, standardize_depth
 
 LOG = logging.getLogger(__name__)
 
 
 class SnowExProfileData(ProfileData):
-    DEFAULT_METADATA_VARIABLE_FILES = [
-        base_metadata_variables_yaml, snowex_metadata_yaml
-    ]
-    DEFAULT_PRIMARY_VARIABLE_FILES = [
-        base_primary_variables_yaml, snowex_variables_yaml
-    ]
+    META_PARSER = SnowExMetaDataParser
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
@@ -31,7 +24,7 @@ class SnowExProfileData(ProfileData):
             columns: list of columns to use in dataframe
             header_position: skiprows for pd.read_csv
         Returns:
-            df: pd.dataframe contain csv data with desired column names
+            df: pd.dataframe with csv data with desired column names
         """
         # header=0 because docs say to if using skip rows and columns
         df = pd.read_csv(

@@ -2,6 +2,8 @@
 Credits
 =======
 
+.. _Joachim Meyer: https://github.com/jomey
+
 Development Lead
 ----------------
 
@@ -10,4 +12,4 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* `Joachim Meyer`_
