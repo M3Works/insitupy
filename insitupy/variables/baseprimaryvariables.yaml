@@ -140,7 +140,7 @@ SNOW_TEMPERATURE:
   match_on_code: true
 SWE:
   auto_remap: true
-  code: SWE
+  code: swe
   description: Snow Water Equivalent
   map_from:
   - swe_mm
