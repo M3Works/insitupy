@@ -4,11 +4,10 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
+from typing import Union
+
 from insitupy.io.metadata import MetaDataParser
-from insitupy.variables import (ExtendableVariables, MeasurementDescription,
-                                base_metadata_variables_yaml,
-                                base_primary_variables_yaml)
-from .metadata import ProfileMetaData
+from insitupy.variables import MeasurementDescription
 
 LOG = logging.getLogger(__name__)
 
@@ -18,86 +17,68 @@ class MeasurementData:
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
-    DEFAULT_METADATA_VARIABLE_FILES = [
-        base_metadata_variables_yaml
-    ]
-    DEFAULT_PRIMARY_VARIABLE_FILES = [
-        base_primary_variables_yaml
-    ]
+    META_PARSER = MetaDataParser
 
     def __init__(
         self,
-        input_df: pd.DataFrame,
-        metadata: ProfileMetaData,
-        variable: MeasurementDescription,
-        meta_parser: MetaDataParser,
-        original_file=None,
-        allow_map_failure=False
+        variable: MeasurementDescription = None,
+        meta_parser: MetaDataParser = None,
     ):
         """
-        Take df of layered data (SMP, pit, etc)
+        Take df of layered data (SMP, pit)
+
         Args:
-            input_df: dataframe of data
-                Should include depth and optional bottom depth
-                Should include sample or sample_a, sample_b, etc
-            metadata: ProfileMetaData object
-            meta_parser: MetaDataParser object. This will hold our variables
-                map and units map
-            variable: description of variable
-            original_file: optional track original file
-            allow_map_failure: if a mapping fails, warn us and use the
-                original string (default False)
+            variable: Description of variable. When None is given, then the
+                definitions of the package YAML will be used.
+            meta_parser: MetaDataParser object. This will hold our variable
+                map and unit map. If no parser is given, then the default
+                parser and definition of this package will be used.
 
         """
+        if meta_parser is None:
+            meta_parser = self.META_PARSER()
         self._meta_parser = meta_parser
-        self._units_map = meta_parser.units_map
-        self._original_file = original_file
-        self._metadata = metadata
-        self._allow_map_failure = allow_map_failure
-        self.variable: MeasurementDescription = variable
-        # mapping of column name to measurement type
+
+        if variable is None:
+            variable = MeasurementDescription()
+        self.variable = variable
+
+        # mapping of all column names to a measurement type
         self._column_mappings = {}
-
         self._sample_column = None
-        # This will populate the column mapping
-        # and filter to the desired measurement column
-        if input_df.empty:
-            LOG.warning("DF is empty")
-            self._df = input_df
-        else:
-            self._df = self._format_df(input_df)
 
-    def _format_df(self, input_df):
-        raise NotImplementedError("not implemented")
+        self._df = None
+        self._metadata = None
+        # Columns that were identified in via MetaDataParser
+        self._meta_columns_map = None
 
-    def _set_column_mappings(self, input_df):
+    def _set_column_mappings(self):
         # Get rid of columns we don't want and populate column mapping
-        columns = input_df.columns.values
-        for c in columns:
+        for column in self.columns:
             # Find the variable associated with each column
             # and store a map
-            cn, cm = self._meta_parser.primary_variables.from_mapping(
-                c, allow_failure=self._allow_map_failure
-            )
+            cn, cm = self._meta_parser.primary_variables.from_mapping(column)
             # join with existing mappings
             self._column_mappings = {**cm, **self._column_mappings}
 
-    def _check_sample_columns(self, input_df):
-        columns = input_df.columns.values
+    def _check_sample_columns(self):
         _sample_columns = [
-            c for c in columns if self._column_mappings.get(c) == self.variable
+            c for c in self.columns
+            if self._column_mappings.get(c) == self.variable
         ]
+
         if len(_sample_columns) == 0:
             raise ValueError(
-                f"No sample columns in {columns}. This is likely because"
+                f"No sample columns in {self.columns}. This is likely because"
                 f" variable {self.variable} is not in columns"
-                f" {input_df.columns}"
+                f" {self.columns}"
             )
         elif len(_sample_columns) > 1:
             LOG.warning(
                 "Only one sample column allowed, keeping the first match"
             )
             _sample_columns = [_sample_columns[0]]
+
         _sample_column = _sample_columns[0]
         # Rename the variable column to the variable code
         # This covers the scenario where we did not auto-remap the
@@ -109,20 +90,27 @@ class MeasurementData:
             raise ValueError(
                 f"{sample_column_type} and {self.variable} are not the same"
             )
-        input_df.rename(
+        self._df.rename(
             columns={_sample_column: sample_column_type.code},
             inplace=True
         )
         self._sample_column = sample_column_type.code
-        return input_df
 
     @property
     def metadata(self):
         return self._metadata
 
     @property
+    def meta_columns_map(self):
+        return self._meta_columns_map
+
+    @metadata.setter
+    def metadata(self, value):
+        self._metadata = value
+
+    @property
     def units_map(self):
-        return self._units_map
+        return self._meta_parser.units_map
 
     @property
     def latlon(self):
@@ -132,6 +120,36 @@ class MeasurementData:
     @property
     def df(self):
         return self._df
+
+    @df.setter
+    def df(self, value):
+        self._df = value
+
+        if value.empty:
+            LOG.warning("DF is empty")
+        else:
+            # This will populate the column mapping
+            # and filter to the desired measurement column
+            self._format_df()
+
+    @property
+    def columns(self) -> Union[np.ndarray, None]:
+        """
+        Gets the column names of the DataFrame if the DataFrame is not None.
+
+        This property method retrieves the column names of the internal
+        DataFrame stored in the `_df` attribute.
+
+        Returns:
+            numpy.ndarray or None: An array of column names
+        """
+        if self._df is None:
+            return None
+        else:
+            return self._df.columns.values
+
+    def _format_df(self):
+        raise NotImplementedError("not implemented")
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
@@ -145,52 +163,31 @@ class MeasurementData:
             columns: list of columns to use in dataframe
             header_position: skiprows for pd.read_csv
         Returns:
-            df: pd.dataframe contain csv data with desired column names
+            df: pd.dataframe of the csv data with desired column names
         """
         raise NotImplementedError("Not implemented")
 
-    @classmethod
-    def from_csv(
-        cls,
-        fname,
-        variable: MeasurementDescription,
-        timezone="US/Mountain",
-        allow_map_failures=False,
-        metadata_variable_files=None,
-        primary_variable_files=None
-    ):
+    def from_csv(self, filename: str):
         """
-        Args:
-            fname: path to file
-            variable: variable in the file
-            timezone: local timezone for file
-            allow_map_failures: allow metadata and column unknowns
-            metadata_variable_files: list of yaml files with metadata variables
-            primary_variable_files: list of yaml files with primary variables
-        Returns:
-            the instantiated class
-        """
-        primary_variable_files = primary_variable_files or \
-            cls.DEFAULT_PRIMARY_VARIABLE_FILES
-        metadata_variable_files = metadata_variable_files or \
-            cls.DEFAULT_METADATA_VARIABLE_FILES
-        meta_parser = MetaDataParser(
-            fname, timezone,
-            ExtendableVariables(entries=primary_variable_files),
-            ExtendableVariables(entries=metadata_variable_files),
-            allow_map_failures=allow_map_failures
-        )
-        # Parse the metadata and column info
-        metadata, columns, columns_map, header_pos = meta_parser.parse()
-        # read in the actual data
-        if columns is None and not columns_map:
-            # Use an empty dataframe if the file is empty
-            LOG.warning(f"File {fname} is empty of rows")
-            data = pd.DataFrame()
-        else:
-            data = cls.read_csv_dataframe(fname, columns, header_pos)
+        Parse all information of a given file, including the header and actual
+        data.
 
-        return cls(data, metadata, variable, meta_parser)
+        Args:
+            filename: (str) Path of a file to read
+        """
+        # Parse the metadata and column info
+        self._metadata, meta_columns, self._meta_columns_map, header_pos = \
+            self._meta_parser.parse(filename=filename)
+
+        # read in the actual data
+        if meta_columns is None and not self._meta_columns_map:
+            # Use an empty dataframe if the file is empty
+            LOG.warning(f"File {filename} is empty of rows")
+            self.df = pd.DataFrame()
+        else:
+            self.df = self.read_csv_dataframe(
+                filename, meta_columns, header_pos
+            )
 
 
 class ProfileData(MeasurementData):
@@ -198,116 +195,127 @@ class ProfileData(MeasurementData):
     This would be one pit, SMP profile, etc
     Unique date, location, variable
     """
+    NAN_DATA_VALUE = -9999
+
     def __init__(
         self,
-        input_df: pd.DataFrame,
-        metadata: ProfileMetaData,
-        variable: MeasurementDescription,
-        meta_parser: MetaDataParser,
-        original_file=None,
-        allow_map_failure=False
+        variable: MeasurementDescription = None,
+        meta_parser: MetaDataParser = None,
     ):
         """
-        Take df of layered data (SMP, pit, etc)
-        Args:
-            input_df: dataframe of data
-                Should include depth and optional bottom depth
-                Should include sample or sample_a, sample_b, etc
-            metadata: ProfileMetaData object
-            meta_parser: MetaDataParser object. This will hold our variables
-                map and units map
-            variable: description of variable
-            original_file: optional track original file
-            allow_map_failure: if a mapping fails, warn us and use the
-                original string (default False)
-
+        See MeasurementData.__init__
         """
+        # Init the measurement class
+        super().__init__(variable=variable, meta_parser=meta_parser)
+
         # These are our default shared columns
         self._depth_columns = [
-            meta_parser.primary_variables.entries["DEPTH"],
-            meta_parser.primary_variables.entries["BOTTOM_DEPTH"]
+            self._meta_parser.primary_variables.entries["DEPTH"],
+            self._meta_parser.primary_variables.entries["BOTTOM_DEPTH"]
         ]
         self._depth_layer = self._depth_columns[0]
         self._lower_depth_layer = self._depth_columns[1]
         # List of measurements to keep
-        self._measurements_to_keep = (
-            self.shared_column_options() + [variable]
-        )
-        self._id = metadata.site_name
-        self._dt = metadata.date_time
-        # Init the measurement class
-        super().__init__(
-            input_df, metadata, variable,
-            meta_parser,
-            original_file=original_file,
-            allow_map_failure=allow_map_failure
-        )
-        columns = self._df.columns.values
-        if len(columns) > 0 and self._depth_layer.code not in columns:
-            raise ValueError(f"Expected {self._depth_layer} in columns")
+        if variable is not None:
+            self._measurements_to_keep = (
+                self.shared_column_options() + [variable]
+            )
+        else:
+            # If no variable is selected, then we will keep all measurements
+            self._measurements_to_keep = []
 
-        # List of columns that are not the desired variable
-        _non_measure_columns = [
-            self._depth_layer.code, self._lower_depth_layer.code,
-            "datetime",
-            "geometry"
-        ]
-        self._non_measure_columns = [
-            c for c in _non_measure_columns if c in columns
-        ]
-
-        # describe the data a bit
-        self._has_layers = self._lower_depth_layer.code in columns
-        # Extend the df info
-        self._add_thickness_to_df()
+        # Descriptive internal properties
+        self._id = None
+        self._dt = None
+        self._has_layers = False
+        self._non_measure_columns = []
 
     def shared_column_options(self):
         return self._depth_columns
 
-    def _format_df(self, input_df):
+    def _format_df(self):
         """
         Format the incoming df with the column headers and other info we want
         This will filter to a single measurement as well as the expected
-        shared columns like depth
+        shared columns like "depth". This will also transform the dataframe
+        into a GeoDataFrame with a geometry column from the parsed location in
+        the metadata.
         """
-        columns = input_df.columns.values
-        self._set_column_mappings(input_df)
+        # Filter to the desired measurement columns
+        self._set_column_mappings()
+        if len(self._measurements_to_keep) > 0:
+            columns_to_keep = [
+                c for c in self.columns
+                if self._column_mappings[c] in self._measurements_to_keep
+            ]
+            self._df = self._df.loc[:, columns_to_keep]
 
-        columns_to_keep = [
-            c for c in columns
-            if self._column_mappings[c] in self._measurements_to_keep
-        ]
-        df = input_df.loc[:, columns_to_keep]
-        # Verify the sample column exists and rename to variable
-        df = self._check_sample_columns(df)
+            # Verify the sample column exists and rename to the selected
+            # variable
+            self._check_sample_columns()
 
-        n_entries = len(df)
-        df["datetime"] = [self._dt] * n_entries
+        self.describe()
 
-        # parse the location
+        n_entries = len(self._df)
+        self._df["datetime"] = [self._dt] * n_entries
+
+        # Prepare location information
         lat, lon = self.latlon
         location = gpd.points_from_xy(
             [lon] * n_entries, [lat] * n_entries
         )
 
-        df = gpd.GeoDataFrame(
-            df, geometry=location
-        ).set_crs("EPSG:4326")
-        df = df.replace(-9999, np.NaN)
+        self._df = gpd.GeoDataFrame(self._df, geometry=location).set_crs(
+            "EPSG:4326"
+        )
+        self._df.replace(self.NAN_DATA_VALUE, np.NaN, inplace=True)
 
-        return df
+    def _add_thickness_to_df(self) -> None:
+        """
+        Calculates and adds the thickness column to the given dataframe if
+        there is layer depth information.
+        """
+        self._df[
+            self._meta_parser.primary_variables.entries[
+                "LAYER_THICKNESS"
+            ].code
+        ] = (
+            self._df[self._depth_layer.code] -
+            self._df[self._lower_depth_layer.code]
+        )
 
-    def _add_thickness_to_df(self):
-        # set the thickness of the layer
+    def from_csv(self, filename: str):
+        """
+        See MeasurementData.from_csv
+        """
+        super().from_csv(filename)
+
+        if len(self.columns) > 0 and self._depth_layer.code not in self.columns:
+            raise ValueError(f"Expected {self._depth_layer} in columns")
+
+    def describe(self) -> None:
+        """
+        Set internal properties based on csv file information and add some
+        additional snow depth information if required information is present.
+        """
+        self._id = self.metadata.site_name
+        self._dt = self.metadata.date_time
+
+        # List of columns that are not the desired variable
+        _non_measure_columns = [
+            self._depth_layer.code,
+            self._lower_depth_layer.code,
+            "datetime",
+            "geometry"
+        ]
+        # Remember them for later
+        self._non_measure_columns = [
+            c for c in _non_measure_columns if c in self.columns
+        ]
+
+        self._has_layers = self._lower_depth_layer.code in self.columns
         if self._has_layers:
-            self._df[
-                self._meta_parser.primary_variables.entries[
-                    "LAYER_THICKNESS"
-                ].code
-            ] = (
-                self._df[self._depth_layer.code] -
-                self._df[self._lower_depth_layer.code]
-            )
+            self._add_thickness_to_df()
 
     @property
     def sum(self):
@@ -329,9 +337,10 @@ class ProfileData(MeasurementData):
         profile = self._df.loc[:, self._sample_column]
         if pd.isna(profile).all():
             return np.nan
+
         if self._has_layers:
             # height weighted mean for these layers
-            thickness = self._df[
+            thickness = self.df[
                 self._meta_parser.primary_variables.entries[
                     "LAYER_THICKNESS"
                 ].code
@@ -367,7 +376,7 @@ def standardize_depth(depths, desired_format='snow_height', is_smp=False):
     """
     Data that is a function of depth comes in 2 formats. Sometimes 0 is
     the snow surface, sometimes 0 is the ground. This function standardizes it
-    for each profile. desired_format can be:
+    for each profile. Desired_format can be:
 
         snow_height: Zero at the bottom of the data.
         surface_datum: Zero at the top of the data and uses negative depths

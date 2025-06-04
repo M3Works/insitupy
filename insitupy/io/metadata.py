@@ -1,5 +1,6 @@
 import logging
-from typing import List
+from pathlib import Path
+from typing import List, Tuple, Optional, Union
 
 import pandas as pd
 
@@ -7,37 +8,44 @@ from .dates import DateManager
 from .locations import LocationManager
 from .strings import StringManager
 from .yaml_codes import YamlCodes
-from ..profiles.metadata import ProfileMetaData
-from ..variables import ExtendableVariables
+from insitupy.variables import (
+    ExtendableVariables,
+    base_metadata_variables_yaml, base_primary_variables_yaml
+)
+from insitupy.profiles.metadata import ProfileMetaData
 
 LOG = logging.getLogger(__name__)
 
 
 class MetaDataParser:
     """
-    Base class for parsing metadata
+    Base class for parsing metadata in the header and data column names
     """
+    DEFAULT_METADATA_VARIABLE_FILES = [base_metadata_variables_yaml]
+    DEFAULT_PRIMARY_VARIABLE_FILES = [base_primary_variables_yaml]
     OUT_TIMEZONE = "UTC"
+    DEFAULT_HEADER_SEPARATOR = ","
+    DEFAULT_HEADER_LINE_START = '#'
 
     def __init__(
         self,
-        fname,
-        timezone,
-        primary_variables: ExtendableVariables,
-        metadata_variables: ExtendableVariables,
-        header_sep=",",
-        allow_split_lines=False,
-        allow_map_failures=False,
-        _id=None,
-        campaign_name=None,
-        units_map=None
+        timezone: Optional[str] = OUT_TIMEZONE,
+        primary_variable_file: Optional[Union[str, Path]] = None,
+        metadata_variable_file: Optional[Union[str, Path]] = None,
+        header_sep=DEFAULT_HEADER_SEPARATOR,
+        allow_split_lines: bool = False,
+        allow_map_failures: bool = False,
+        _id: Optional[str] = None,
+        campaign_name: Optional[str] = None,
+        units_map: Optional[dict] = None
     ):
         """
         Args:
-            fname: path of csv file to parse
             timezone: string timezone
-            primary_variables: ExtendableVariables for primary variables
-            metadata_variables: ExtendableVariables for metadata variables
+            primary_variable_file:
+                Path to file with primary variables mappings overwrites
+            metadata_variable_file:
+                Path to file with metadata variables mappings overwrites
             header_sep: expected header separator
             allow_split_lines: Allow for split header lines that
                 don't start with the expected header character. In this case
@@ -50,7 +58,7 @@ class MetaDataParser:
             campaign_name: optional override for campaign name
             units_map = optional map of variable type to MeasurementDescription
         """
-        self._fname = fname
+        self._allow_split_header_lines = allow_split_lines
         self._input_timezone = timezone
         self._header_sep = header_sep
         self._rough_obj = {}
@@ -59,11 +67,45 @@ class MetaDataParser:
         self._campaign_name = campaign_name
         self._units_map = units_map or {}
 
-        self.primary_variables = primary_variables
-        self.metadata_variables = metadata_variables
+        self.primary_variables = self.extend_variables(
+            self.DEFAULT_PRIMARY_VARIABLE_FILES,
+            primary_variable_file,
+            allow_map_failures=allow_map_failures
+        )
+        self.metadata_variables = self.extend_variables(
+            self.DEFAULT_METADATA_VARIABLE_FILES,
+            metadata_variable_file,
+            allow_map_failures=allow_map_failures,
+        )
 
-        self._allow_split_header_lines = allow_split_lines
-        self._allow_map_failures = allow_map_failures
+    @staticmethod
+    def extend_variables(
+        default: list,
+        additions: Optional[Union[str, Path]] = None,
+        allow_map_failures: bool = False
+    ) -> ExtendableVariables:
+        """
+        Extends a list of default variables with optional additional entries
+        and wraps them into an ExtendableVariables object. Identical code
+        entries from the additions will overwrite the default entries.
+
+        Args:
+            default (list): A list of default variable entries
+            additions (str | Path, optional):
+                Additional entries from a file. (Default: None)
+            allow_map_failures (bool, optional):
+                Allow mapping failure in ExtendedVariables mapping.
+                (Defaults: False)
+
+        Returns:
+            ExtendableVariables object mapping default and extended file
+            entries.
+        """
+        entries = default + [additions] if additions else default
+        return ExtendableVariables(
+            entries=entries,
+            allow_map_failures=allow_map_failures
+        )
 
     @property
     def rough_obj(self):
@@ -169,31 +211,29 @@ class MetaDataParser:
             d = ln.split(self._header_sep)
 
             # Key is always the first entry in comma sep list
-            k = StringManager.standardize_key(d[0])
+            key = StringManager.standardize_key(d[0])
 
             # Avoid splitting on times
-            if 'time' in k or 'date' in k:
+            if 'time' in key or 'date' in key:
                 value = ':'.join(d[1:]).strip()
             else:
                 value = ', '.join(d[1:])
                 value = StringManager.clean_str(value)
 
             # cast the rough object key to a known key
-            known_name, k_mapping = self.metadata_variables.from_mapping(
-                k, allow_failure=self._allow_map_failures
-            )
+            known_name, k_mapping = self.metadata_variables.from_mapping(key)
 
             # Assign non-empty strings to dictionary
-            if k and value:
+            if key and value:
                 data[known_name] = value.strip(
                     ' '
                 ).replace('"', '').replace('  ', ' ')
 
-            elif k and not value:
+            elif key and not value:
                 data[known_name] = None
         return data
 
-    def parse(self):
+    def parse(self, filename: str) -> Tuple:
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
@@ -201,11 +241,14 @@ class MetaDataParser:
 
         This populates self.rough_obj
 
+        Args:
+            filename: (str) Full path to the file with the header info to parse
+
         Returns:
-            (metadata object, column list, position of header in file)
+            Tuple: metadata object, column list, position of header in file
         """
         meta_lines, columns, columns_map, header_position = \
-            self.find_header_info(self._fname)
+            self.find_header_info(filename)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = ProfileMetaData(
@@ -261,33 +304,37 @@ class MetaDataParser:
         # for c in ['()', '[]']:
         #     str_line = StringManager.strip_encapsulated(str_line, c)
 
-        raw_cols = str_line.strip('#').split(',')
+        raw_cols = str_line.strip(
+            self.DEFAULT_HEADER_LINE_START
+        ).split(
+            self._header_sep
+        )
         # Clean the raw columns
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
         # Infer units from the raw columns
-        infered_units = [StringManager.infer_unit_from_key(c) for c in raw_cols]
+        inferred_units = [
+            StringManager.infer_unit_from_key(c) for c in raw_cols
+        ]
         final_cols = []
         final_col_map = {}
         inferred_units_map = {}
         # Iterate through the columns and map to desired result
-        for c, unit in zip(standard_cols, infered_units):
+        for column, unit in zip(standard_cols, inferred_units):
             # TODO: could we return unmapped columns here?
-            mapped_col, col_map = self.primary_variables.from_mapping(
-                c, allow_failure=self._allow_map_failures
-            )
+            mapped_col, col_map = self.primary_variables.from_mapping(column)
             # Store the list of columns to use when reading in the
             # dataframe
             final_cols.append(mapped_col)
-            # Store the map of column name to the known variable
+            # Store the map of a column name to the known variable
             final_col_map = {**final_col_map, **col_map}
             # Store the map of column name to inferred unit
             result_obj = col_map[mapped_col]
             if result_obj is None:
-                if self._allow_map_failures:
-                    LOG.warning(f"No unit for {c}")
+                if self.primary_variables.allow_map_failures:
+                    LOG.warning(f"No unit for {column}")
                 else:
                     raise RuntimeError(
-                        f"No unit for {c} - column mapping has failed"
+                        f"No unit for {column} - column mapping has failed"
                     )
             else:
                 # override the code if it is given
@@ -297,7 +344,7 @@ class MetaDataParser:
 
         return final_cols, final_col_map, inferred_units_map
 
-    def find_header_info(self, filename=None):
+    def find_header_info(self, filename: str):
         """
         Read in all site details file for a pit If the filename has the word
         site in it then we read everything in the file. Otherwise, we use this
@@ -314,7 +361,6 @@ class MetaDataParser:
                    **header_pos** - Index of the columns header for skiprows in
                                     read_csv
        """
-        filename = filename or self._fname
         filename = str(filename)
         try:
             with open(filename, "r", encoding="utf-8-sig") as f:
@@ -354,7 +400,7 @@ class MetaDataParser:
         final_lines = [ln.strip() for ln in final_lines]
         # Join all data and split on header separator
         # This handles combining split lines
-        str_data = " ".join(final_lines).split('#')
+        str_data = " ".join(final_lines).split(self.DEFAULT_HEADER_LINE_START)
         str_data = [ln.strip() for ln in str_data if ln]
 
         return str_data, columns, columns_map, header_pos
@@ -404,8 +450,8 @@ class MetaDataParser:
         # #2)
         n_columns = len(lines[-1].split(','))
 
-        if lines[0][0] == '#':
-            header_indicator = '#'
+        if lines[0][0] == self.DEFAULT_HEADER_LINE_START:
+            header_indicator = self.DEFAULT_HEADER_LINE_START
         else:
             header_indicator = None
 

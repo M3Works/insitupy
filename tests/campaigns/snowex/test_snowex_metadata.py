@@ -1,11 +1,34 @@
 import pandas as pd
 import pytest
 
-from insitupy.campaigns.snowex import snowex_metadata_yaml, \
-    snowex_variables_yaml
+from insitupy.campaigns.snowex import SnowExMetaDataParser
 from insitupy.io.metadata import MetaDataParser
-from insitupy.variables import ExtendableVariables, \
-    base_metadata_variables_yaml, base_primary_variables_yaml
+from tests.test_helpers import yaml_file_in_list
+
+
+class TestSnowMetaDataParser:
+    def test_inheritance(self):
+        assert issubclass(SnowExMetaDataParser, MetaDataParser) is True
+
+    def test_default_metadata_variables(self):
+        assert yaml_file_in_list(
+            'basemetadatavariables',
+            SnowExMetaDataParser.DEFAULT_METADATA_VARIABLE_FILES
+        )
+        assert yaml_file_in_list(
+            'snowexmetadatavariables',
+            SnowExMetaDataParser.DEFAULT_METADATA_VARIABLE_FILES
+        )
+
+    def test_default_primary_variables(self):
+        assert yaml_file_in_list(
+            'baseprimaryvariables',
+            SnowExMetaDataParser.DEFAULT_PRIMARY_VARIABLE_FILES
+        )
+        assert yaml_file_in_list(
+            'snowexprimaryvariables',
+            SnowExMetaDataParser.DEFAULT_PRIMARY_VARIABLE_FILES
+        )
 
 
 # List of test files with the values as the expected columns to be parsed
@@ -21,43 +44,36 @@ TEST_FILES = {
 }
 
 
-@pytest.fixture(
-    params=list(TEST_FILES.keys()),
-    scope="class",
-)
-def parser_object(request, data_path):
-    # This is the parser object
-    return MetaDataParser(
-        data_path.joinpath(request.param),
+@pytest.fixture(scope="class")
+def meta_data_parser():
+    return SnowExMetaDataParser(
         "US/Mountain",
-        ExtendableVariables(
-            [base_primary_variables_yaml, snowex_variables_yaml]
-        ),
-        ExtendableVariables(
-            [base_metadata_variables_yaml, snowex_metadata_yaml]
-        ),
         allow_map_failures=True
     )
 
 
-@pytest.fixture(scope="class")
-def metadata_info(parser_object):
-    return parser_object.parse()
+@pytest.fixture(
+    params=list(TEST_FILES.keys()),
+    scope="class",
+)
+def metadata_info(request, meta_data_parser, data_path):
+    metadata = meta_data_parser.parse(data_path.joinpath(request.param))
+    return metadata, request.param
 
 
 @pytest.fixture
 def metadata(metadata_info):
-    return metadata_info[0]
+    return metadata_info[0][0]
 
 
 @pytest.fixture
 def columns(metadata_info):
-    return metadata_info[1]
+    return metadata_info[0][1], metadata_info[1]
 
 
 @pytest.fixture
 def header_pos(metadata_info):
-    return metadata_info[3]
+    return metadata_info[0][3]
 
 
 class TestSnowexPitMetadata:
@@ -93,5 +109,5 @@ class TestSnowexPitMetadata:
     def test_header_position(self, header_pos):
         assert header_pos == 10
 
-    def test_expected_columns(self, columns, parser_object):
-        assert columns == TEST_FILES[parser_object._fname.name]
+    def test_expected_columns(self, columns):
+        assert columns[0] == TEST_FILES[columns[1]]
