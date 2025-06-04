@@ -290,7 +290,10 @@ class MetaDataParser:
                         f"No unit for {c} - column mapping has failed"
                     )
             else:
-                inferred_units_map[result_obj.code] = unit
+                # override the code if it is given
+                inferred_units_map[
+                    result_obj.code
+                ] = self._units_map.get(result_obj.code) or unit
 
         return final_cols, final_col_map, inferred_units_map
 
