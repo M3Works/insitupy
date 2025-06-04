@@ -2,4 +2,4 @@
 
 __author__ = """M3 Works LLC"""
 __email__ = 'info@m3works.io'
-__version__ = '0.3.0'
+__version__ = '0.4.0'
