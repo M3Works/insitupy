@@ -74,7 +74,6 @@ One can override a variable by defining the same `code` as in the default suppli
 files within insitupy. The user definition always has precedence over the internal
 ones.
 
-.. _example_file:
 Example
 -------
 I want to read in a file that looks like this:
