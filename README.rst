@@ -30,7 +30,7 @@ Features
 * Parsing of date and location data
 
 Definitions
----------
+-----------
 
 Types of variables
 ~~~~~~~~~~~~~~~~~~
@@ -46,7 +46,7 @@ data above the last row with the '#' is assumed to be additional information
 that describes the data.
 
 Variable definitions
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 Both variables types are defined the same way, in a separate yaml file.
 A standard single variable definition looks like this:
 
