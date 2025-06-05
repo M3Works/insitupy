@@ -13,7 +13,33 @@ class RowKeys:
     UTC_TOD = 'utctod'
 
 
-class DateManager:
+class DateTimeManager:
+    @staticmethod
+    def parse(rows: dict) -> pd.Timestamp:
+        """
+        Parses the header dictionary to extract a datetime value.
+
+        Args:
+            rows (dict): Dictionary containing date and time information.
+
+        Returns:
+            pd.Timestamp: A pandas Timestamp object representing the parsed
+            datetime value.
+        """
+        datetime = None
+        # Look for a 'datetime' header entry
+        if rows.get(YamlCodes.DATE_TIME) is not None:
+            str_date = str(
+                rows[YamlCodes.DATE_TIME].replace('T', '-')
+            )
+            datetime = pd.to_datetime(str_date)
+
+        # If we didn't find date/time combined.
+        if datetime is None:
+            datetime = DateTimeManager.handle_separate_datetime(rows)
+
+        return datetime
+
     @staticmethod
     def handle_separate_datetime(rows):
         """
