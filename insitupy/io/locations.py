@@ -112,6 +112,7 @@ class LocationManager:
         elif YamlCodes.EPSG in headers.keys():
             return int(headers[YamlCodes.EPSG])
         else:
-            raise ValueError(
+            LOG.warning(
                 f"Could not find UTM keys in headers: {headers.keys()}"
             )
+            return None
