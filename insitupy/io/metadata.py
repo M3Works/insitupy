@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional, Union
 
 import pandas as pd
 
-from .dates import DateManager
+from .dates import DateTimeManager
 from .locations import LocationManager
 from .strings import StringManager
 from .yaml_codes import YamlCodes
@@ -133,21 +133,9 @@ class MetaDataParser:
                 raise RuntimeError(f"Failed to parse ID from {self.rough_obj}")
 
     def parse_date_time(self) -> pd.Timestamp:
-        datetime = None
-        # TODO: Move this logic into the DateManager and extend the base
-        #       metadata parser to also support separate time and date fields
-        # In case we found a date entry that has date and time
-        if self.rough_obj[YamlCodes.DATE_TIME] is not None:
-            str_date = str(
-                self.rough_obj[YamlCodes.DATE_TIME].replace('T', '-')
-            )
-            datetime = pd.to_datetime(str_date)
+        datetime = DateTimeManager.parse(self.rough_obj)
 
-        # If we didn't find date/time combined.
-        if datetime is None:
-            datetime = DateManager.handle_separate_datetime(self.rough_obj)
-
-        return DateManager.adjust_timezone(
+        return DateTimeManager.adjust_timezone(
             datetime,
             in_timezone=self._input_timezone,
             out_timezone=self.OUT_TIMEZONE

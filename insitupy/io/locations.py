@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 
 import utm
 
@@ -12,7 +12,9 @@ class LocationManager:
     NORTHERN_HEMISPHERE = True
 
     @classmethod
-    def parse_from_headers(cls, headers: dict) -> Tuple[str, str, str, str]:
+    def parse_from_headers(cls, headers: dict) -> Tuple[
+        float, float, Union[str, None], Union[str, None]
+    ]:
         """
         Initial parse of lat, lon, easting, northing from the headers object
 
@@ -100,7 +102,7 @@ class LocationManager:
         return lat, lon, easting, northing
 
     @classmethod
-    def parse_utm_epsg(cls, headers: dict) -> int:
+    def parse_utm_epsg(cls, headers: dict) -> Union[int, None]:
         # TODO: headers based utm?
         if YamlCodes.UTM_ZONE in headers.keys():
             utm_zone = int(
@@ -112,6 +114,7 @@ class LocationManager:
         elif YamlCodes.EPSG in headers.keys():
             return int(headers[YamlCodes.EPSG])
         else:
-            raise ValueError(
+            LOG.warning(
                 f"Could not find UTM keys in headers: {headers.keys()}"
             )
+            return None
