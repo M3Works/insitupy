@@ -108,6 +108,9 @@ NOTES:
   auto_remap: true
   code: site_notes
   description: Site Notes
+  map_from:
+  - notes
+  match_on_code: true
 OBSERVERS:
   auto_remap: true
   code: observers
@@ -131,7 +134,7 @@ SLOPE:
   code: slope_angle
   description: Slope Angle
   map_from:
-  - slope_angle
+  - slope
 TREE_CANOPY:
   auto_remap: true
   code: tree_canopy
@@ -156,6 +159,8 @@ WEATHER:
   auto_remap: true
   code: weather_description
   description: Weather Description
+  map_from:
+      - weather
 WIND:
   auto_remap: true
   code: wind
