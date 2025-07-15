@@ -70,7 +70,9 @@ class ProfileDataCollection:
         result = []
 
         # Parse the entire file before teasing out individual profiles
-        all_profiles = cls.PROFILE_DATA_CLASS(meta_parser=meta_parser)
+        all_profiles = cls.PROFILE_DATA_CLASS(
+            variable=None, meta_parser=meta_parser
+        )
         all_profiles.from_csv(filename)
 
         # columns that will be included in data, but are not the primary
