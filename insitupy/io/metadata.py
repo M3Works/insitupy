@@ -26,6 +26,7 @@ class MetaDataParser:
     OUT_TIMEZONE = "UTC"
     DEFAULT_HEADER_SEPARATOR = ","
     DEFAULT_HEADER_LINE_START = '#'
+    DEAFAULT_COLUMN_SEPARATOR = ','
 
     def __init__(
         self,
@@ -33,6 +34,7 @@ class MetaDataParser:
         primary_variable_file: Optional[Union[str, Path]] = None,
         metadata_variable_file: Optional[Union[str, Path]] = None,
         header_sep=DEFAULT_HEADER_SEPARATOR,
+        column_sep=DEAFAULT_COLUMN_SEPARATOR,
         allow_split_lines: bool = False,
         allow_map_failures: bool = False,
         _id: Optional[str] = None,
@@ -47,6 +49,7 @@ class MetaDataParser:
             metadata_variable_file:
                 Path to file with metadata variables mappings overwrites
             header_sep: expected header separator
+            column_sep: expected column separator
             allow_split_lines: Allow for split header lines that
                 don't start with the expected header character. In this case
                 the number of header lines will be the max line starting with
@@ -61,6 +64,7 @@ class MetaDataParser:
         self._allow_split_header_lines = allow_split_lines
         self._input_timezone = timezone
         self._header_sep = header_sep
+        self._column_sep = column_sep
         self._rough_obj = {}
         self._lat_lon_easting_northing = None
         self._id = _id
@@ -295,7 +299,7 @@ class MetaDataParser:
         raw_cols = str_line.strip(
             self.DEFAULT_HEADER_LINE_START
         ).split(
-            self._header_sep
+            self._column_sep
         )
         # Clean the raw columns
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
