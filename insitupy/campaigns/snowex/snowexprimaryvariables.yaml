@@ -14,19 +14,6 @@ INSTRUMENT:
   - measurement_tool
   - instrument
   match_on_code: true
-IGNORE:
-  auto_remap: false
-  code: ignore
-  description: Ignore this
-  map_from:
-  - original_index
-  - id
-  - freq_mhz
-  - camera
-  - avgvelocity
-  - equipment
-  - version_number
-  match_on_code: true
 COMMENTS:
   auto_remap: false
   code: comments
