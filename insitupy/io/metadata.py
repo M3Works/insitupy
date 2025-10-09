@@ -26,7 +26,8 @@ class MetaDataParser:
     OUT_TIMEZONE = "UTC"
     DEFAULT_HEADER_SEPARATOR = ","
     DEFAULT_HEADER_LINE_START = '#'
-    DEAFAULT_COLUMN_SEPARATOR = ','
+    DEFAULT_COLUMN_SEPARATOR = ','
+    END_OF_LINE = '\n\r'
 
     def __init__(
         self,
@@ -34,7 +35,7 @@ class MetaDataParser:
         primary_variable_file: Optional[Union[str, Path]] = None,
         metadata_variable_file: Optional[Union[str, Path]] = None,
         header_sep=DEFAULT_HEADER_SEPARATOR,
-        column_sep=DEAFAULT_COLUMN_SEPARATOR,
+        column_sep=DEFAULT_COLUMN_SEPARATOR,
         allow_split_lines: bool = False,
         allow_map_failures: bool = False,
         _id: Optional[str] = None,
@@ -200,16 +201,25 @@ class MetaDataParser:
 
         # Collect key value pairs from the information above the column header
         for ln in meta_lines:
-            d = ln.split(self._header_sep)
+            # Filter empty strings. Sometimes we get empty metadata lines or
+            # entries in form of: Key,Value,,, ,
+            metadata_columns = [
+                col for col in ln.split(self._header_sep)
+                if (col and len(col.strip()) > 0)
+            ]
+
+            # If we don't have a key and value pair, there is no information to store
+            if len(metadata_columns) < 2:
+                continue
 
             # Key is always the first entry in comma sep list
-            key = StringManager.standardize_key(d[0])
+            key = StringManager.standardize_key(metadata_columns[0])
 
             # Avoid splitting on times
             if 'time' in key or 'date' in key:
-                value = ':'.join(d[1:]).strip()
+                value = ':'.join(metadata_columns[1:]).strip()
             else:
-                value = ', '.join(d[1:])
+                value = ', '.join(metadata_columns[1:])
                 value = StringManager.clean_str(value)
 
             # cast the rough object key to a known key
@@ -291,16 +301,14 @@ class MetaDataParser:
         """
         Parse the column names from the input line. This can include mapping
         """
-        # Parse the columns header based on the size of the last line
-        # Remove units
-        # for c in ['()', '[]']:
-        #     str_line = StringManager.strip_encapsulated(str_line, c)
-
         raw_cols = str_line.strip(
-            self.DEFAULT_HEADER_LINE_START
+            self.DEFAULT_HEADER_LINE_START + self.END_OF_LINE
         ).split(
             self._column_sep
         )
+        # Filter empty strings, especially with trailing commas.
+        # Example: col1, col2, col3,
+        raw_cols = [col for col in raw_cols if col]
         # Clean the raw columns
         standard_cols = [StringManager.standardize_key(c) for c in raw_cols]
         # Infer units from the raw columns
