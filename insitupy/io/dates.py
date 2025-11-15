@@ -56,18 +56,24 @@ class DateTimeManager:
         # Handle data dates and times
         if YamlCodes.DATE in keys and YamlCodes.TIME in keys:
             date_str = str(rows[YamlCodes.DATE])
-
-            # Let pandas try the date separate first
-            if len(date_str) == 6:
-                date_str = pd.to_datetime(date_str).strftime('%Y-%m-%d')
-
             # Allow for nan time
             time_str = StringManager.parse_none(rows[YamlCodes.TIME])
 
-            if time_str is not None:
-                date_str += f" {time_str}"
+            datetime = None
+            # Let pandas try the date separate first
+            if len(date_str) <= 10 and time_str is None:
+                datetime = pd.to_datetime(date_str)
 
-            datetime = pd.to_datetime(date_str)
+            if time_str is not None:
+                # Check for time without seconds. Example: 14:00 and not a float time
+                if ':' in time_str and len(time_str) < 8:
+                    time = pd.to_timedelta(time_str + ':00')
+
+                    datetime = pd.to_datetime(date_str) + time
+                else:
+                    datetime = pd.to_datetime(date_str + ' ' + time_str)
+
+            return datetime
 
         elif YamlCodes.DATE in keys:
             datetime = pd.to_datetime(rows[YamlCodes.DATE])

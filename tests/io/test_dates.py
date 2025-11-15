@@ -63,11 +63,24 @@ class TestDateTimeManager:
         with pytest.raises(ValueError):
             DateTimeManager.parse(header)
 
-    def test_separate_date_and_time(self):
+    @pytest.mark.parametrize(
+        "date, time",
+        [
+            ("2025-04-01", "12:00"),
+            ("2025-04-01", "NaN"),
+            ("2025-04-01", ""),
+            ("20250401", "12:00"),
+            ("20250401", "12:00:00"),
+            ("20250401", "12:00:59"),
+            ("040125", "120059.15"),
+            ("040125", "NaN"),
+        ],
+    )
+    def test_separate_date_and_time(self, date, time):
         date = DateTimeManager.handle_separate_datetime(
             {
-                'date': '2025-04-01',
-                'time': '12:00',
+                'date': date,
+                'time': time,
                 'header1': 'value1',
             }
         )
@@ -75,8 +88,19 @@ class TestDateTimeManager:
         assert date.year == 2025
         assert date.month == 4
         assert date.day == 1
-        assert date.hour == 12
-        assert date.minute == 0
+        if ':' in time or '.' in time:
+            assert date.hour == 12
+            assert date.minute == 0
+            if time[-1] == '0':
+                assert date.second == 0
+            elif time[-3] == '.':
+                assert str(date.second) == time[-5:-3]
+            else:
+                assert str(date.second) == time[-2:]
+        else:
+            assert date.hour == 0
+            assert date.minute == 0
+            assert date.second == 0
 
     def test_separate_date_no_time(self):
         date = DateTimeManager.handle_separate_datetime({'date': '2025-04-01'})
