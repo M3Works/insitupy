@@ -66,7 +66,7 @@ class TestExtendableVariables:
 
     def test_from_mapping_failure(self, extendable_variables_fixture):
         with pytest.raises(
-                InputMappingError, match="Could not find mapping for humidity"
+                InputMappingError, match="Could not find mapping for: humidity"
         ):
             extendable_variables_fixture.from_mapping("humidity")
 

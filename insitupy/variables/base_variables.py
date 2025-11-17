@@ -154,7 +154,7 @@ class ExtendableVariables:
                 column_mapping[result] = None
             else:
                 raise InputMappingError(
-                    f"Could not find mapping for {input_name}"
+                    f"Could not find mapping for: {input_name}"
                 )
         LOG.debug(
             f"Mapping {result} to {result} (type {column_mapping[result]})"
